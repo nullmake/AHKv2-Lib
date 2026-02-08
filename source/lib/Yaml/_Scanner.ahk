@@ -109,13 +109,18 @@ class _YamlScanner {
             return this._ScanQuotedScalar(_char)
         }
 
+        ; Block Scalar Indicators
+        if (_char == "|" || _char == ">") {
+            return this._ScanBlockScalar(_char)
+        }
+
         ; Flow Indicators
         if (InStr("[]{},", _char)) {
             _type := (_char == "[") ? "FlowSequenceStart"
                     : (_char == "]") ? "FlowSequenceEnd"
                     : (_char == "{") ? "FlowMappingStart"
                     : (_char == "}") ? "FlowMappingEnd"
-                    : "FlowEntrySeparator" ; ","
+                    : "FlowEntrySeparator"
 
             _token := {type: _type, value: _char, line: this._line, column: this._column}
             this._Move(1)
@@ -144,7 +149,6 @@ class _YamlScanner {
         }
 
         ; Default Plain Scalar
-        ; Stops at indicators, whitespace, or flow symbols.
         if (RegExMatch(SubStr(this._source, this._pos), "^(?:[^:#\s\n\[\]{},]|(?<!\s)#)+", &_match)) {
             _val := _match[0]
             _token := {type: "Scalar", value: _val, line: this._line, column: this._column}
@@ -310,6 +314,107 @@ class _YamlScanner {
         }
 
         throw YamlError("Unclosed quoted scalar", _startLine, _startCol)
+    }
+
+    /**
+    * @method _ScanBlockScalar
+    * Reads literal (|) or folded (>) block scalars with chopping support (+, -).
+    */
+    _ScanBlockScalar(indicator) {
+        _startLine := this._line
+        _startCol := this._column
+        this._Move(1)
+
+        ; Parse chopping indicator
+        _chopping := "clip"
+        _next := SubStr(this._source, this._pos, 1)
+        if (_next == "-") {
+            _chopping := "strip"
+            this._Move(1)
+        } else if (_next == "+") {
+            _chopping := "keep"
+            this._Move(1)
+        }
+
+        ; Skip trailing space and comments on the indicator line
+        this._SkipWhitespaceAndComments()
+        if (this._pos <= this._length && SubStr(this._source, this._pos, 1) == "`n") {
+            this._Move(1)
+            this._line++
+            this._column := 1
+        }
+
+        _blockIndent := 0
+        _content := ""
+        _isFirstLine := true
+        _lastLineEmpty := false
+
+        while (this._pos <= this._length) {
+            _currentLineIndent := 0
+            _tempPos := this._pos
+            while (_tempPos <= this._length && SubStr(this._source, _tempPos, 1) == " ") {
+                _currentLineIndent++
+                _tempPos++
+            }
+
+            _charAfterIndent := SubStr(this._source, _tempPos, 1)
+
+            ; Check for block end: non-empty line with less/equal indentation than parent
+            if (_charAfterIndent != "`n" && _currentLineIndent <= this._indentStack[this._indentStack.Length]) {
+                break
+            }
+
+            ; Set block indentation level from the first non-empty line
+            if (_isFirstLine && _charAfterIndent != "`n") {
+                _blockIndent := _currentLineIndent
+                _isFirstLine := false
+            }
+
+            if (_charAfterIndent == "`n") {
+                _content .= "`n"
+                _lastLineEmpty := true
+                this._Move(_currentLineIndent + 1)
+            } else {
+                if (_currentLineIndent < _blockIndent) {
+                    throw YamlError("Less indentation than block start", this._line, _currentLineIndent + 1)
+                }
+
+                this._Move(_blockIndent)
+                _lineText := ""
+                while (this._pos <= this._length && SubStr(this._source, this._pos, 1) != "`n") {
+                    _lineText .= SubStr(this._source, this._pos, 1)
+                    this._Move(1)
+                }
+
+                if (indicator == ">" && _content != "" && SubStr(_content, -1) == "`n" && !_lastLineEmpty) {
+                    _content := SubStr(_content, 1, -1) . " "
+                }
+
+                _content .= _lineText
+                _lastLineEmpty := false
+
+                if (this._pos <= this._length && SubStr(this._source, this._pos, 1) == "`n") {
+                    _content .= "`n"
+                    this._Move(1)
+                }
+            }
+            this._line++
+            this._column := 1
+        }
+
+        ; Handle Chopping (YAML 1.2.2 - 8.1.1.2)
+        if (_chopping == "strip") {
+            _content := RTrim(_content, "`n")
+        } else if (_chopping == "clip") {
+            ; Ensure exactly one trailing newline if content is not empty
+            if (_content != "") {
+                _content := RTrim(_content, "`n") . "`n"
+            }
+        }
+        ; For 'keep', all newlines are already preserved in the loop.
+
+        this._isAtLineStart := true
+        return {type: "Scalar", value: _content, line: _startLine, column: _startCol}
     }
 
     /**

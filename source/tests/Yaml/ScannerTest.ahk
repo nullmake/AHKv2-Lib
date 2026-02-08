@@ -134,6 +134,25 @@ class ScannerTest {
     }
 
     /**
+    * @method Test_ScanBlockScalarChopping
+    */
+    Test_ScanBlockScalarChopping() {
+        ; 1. Strip (-) : Remove all trailing newlines
+        _input1 := "literal: |-`n  line`n`n"
+        _scanner1 := _YamlScanner(_input1)
+        _scanner1.FetchToken() ; literal
+        _scanner1.FetchToken() ; :
+        Assert.Equal("line", _scanner1.FetchToken().value)
+
+        ; 2. Keep (+) : Preserve all trailing newlines
+        _input2 := "literal: |+`n  line`n`n"
+        _scanner2 := _YamlScanner(_input2)
+        _scanner2.FetchToken() ; literal
+        _scanner2.FetchToken() ; :
+        Assert.Equal("line`n`n", _scanner2.FetchToken().value)
+    }
+
+    /**
     * @method Test_ScanMultipleDocuments
     */
     Test_ScanMultipleDocuments() {

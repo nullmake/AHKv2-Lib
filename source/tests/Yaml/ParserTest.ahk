@@ -165,4 +165,41 @@ class ParserTest {
         Assert.Equal("val", _parser.NextEvent().value)
         Assert.Equal("YamlMappingEndEvent", Type(_parser.NextEvent()))
     }
+
+    /**
+    * @method Test_ParseLiteralBlockScalar
+    */
+    Test_ParseLiteralBlockScalar() {
+        _input := "key: |`n  line1`n  line2"
+        _scanner := _YamlScanner(_input)
+        _parser := _YamlParser(_scanner)
+
+        _parser.NextEvent() ; StreamStart
+        _parser.NextEvent() ; DocumentStart
+        _parser.NextEvent() ; MappingStart
+        _parser.NextEvent() ; key
+
+        _scalar := _parser.NextEvent()
+        Assert.Equal("YamlScalarEvent", Type(_scalar))
+        ; Literal preserves newlines and default Clip adds one at the end if missing.
+        Assert.Equal("line1`nline2`n", _scalar.value)
+    }
+
+    /**
+    * @method Test_ParseFoldedBlockScalar
+    */
+    Test_ParseFoldedBlockScalar() {
+        _input := "key: >`n  line1`n  line2"
+        _scanner := _YamlScanner(_input)
+        _parser := _YamlParser(_scanner)
+
+        _parser.NextEvent() ; StreamStart
+        _parser.NextEvent() ; DocumentStart
+        _parser.NextEvent() ; MappingStart
+        _parser.NextEvent() ; key
+
+        _scalar := _parser.NextEvent()
+        ; Folded converts single newlines into spaces.
+        Assert.Equal("line1 line2`n", _scalar.value)
+    }
 }
