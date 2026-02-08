@@ -86,14 +86,23 @@ class _YamlScanner {
         ; Handle end of stream
         if (this._pos > this._length) {
             ; Finalize indentation before ending stream
-            this._UnrollIndents(0)
-            if (this._pendingTokens.Length > 0) {
-                return this._pendingTokens.RemoveAt(1)
+            if (this._indentStack.Length > 1) {
+                this._UnrollIndents(0)
+                return this.FetchToken()
             }
             return {Type: "StreamEnd", Value: "", Line: this._line, Column: this._column}
         }
 
         _char := SubStr(this._source, this._pos, 1)
+
+        ; Line Break
+        if (_char == "`n") {
+            this._Move(1)
+            this._line++
+            this._column := 1
+            this._isAtLineStart := true
+            return this.FetchToken()
+        }
 
         ; Sequence Indicator '-'
         if (_char == "-" && this._IsFollowedByWhitespace(this._pos + 1)) {
@@ -114,15 +123,6 @@ class _YamlScanner {
             _token := {Type: "MappingIndicator", Value: ":", Line: this._line, Column: this._column}
             this._Move(1)
             return _token
-        }
-
-        ; Line Break
-        if (_char == "`n") {
-            this._Move(1)
-            this._line++
-            this._column := 1
-            this._isAtLineStart := true
-            return this.FetchToken()
         }
 
         ; Default Plain Scalar
@@ -170,7 +170,7 @@ class _YamlScanner {
         }
 
         ; Skip empty lines
-        if (SubStr(this._source, this._pos, 1) == "`n") {
+        if (this._pos <= this._length && SubStr(this._source, this._pos, 1) == "`n") {
             this._isAtLineStart := true
             return
         }

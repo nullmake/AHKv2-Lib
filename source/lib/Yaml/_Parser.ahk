@@ -5,7 +5,7 @@
  * @description Syntactic analysis and event generation.
  * @author nullmake
  * @license Apache-2.0
- *
+ * 
  * Copyright 2026 nullmake
  */
 
@@ -20,14 +20,14 @@ class _YamlParser {
     _scanner := ""
 
     /**
-     * @field {Array} _states - Stack of parsing states (function objects).
+     * @field {Array} _states - Stack of parsing state names (method names).
      */
     _states := []
 
     /**
-     * @field {Object} _peekedToken - Lookahead token.
+     * @field {Array} _tokens - Lookahead token queue.
      */
-    _peekedToken := ""
+    _tokens := []
 
     /**
      * @constructor
@@ -35,8 +35,7 @@ class _YamlParser {
      */
     __New(scanner) {
         this._scanner := scanner
-        ; Start with the stream level
-        this._states.Push(this._StateStreamStart.Bind(this))
+        this._states.Push("_StateStreamStart")
     }
 
     /**
@@ -48,43 +47,45 @@ class _YamlParser {
         if (this._states.Length == 0) {
             return ""
         }
-
-        ; Execute the current state logic
-        _stateFunc := this._states[this._states.Length]
-        return _stateFunc()
+        
+        _stateName := this._states[this._states.Length]
+        return this.%_stateName%()
     }
 
     /**
      * @method _PeekToken
-     * Returns the next token without consuming it.
+     * Returns the N-th next token without consuming it.
+     * @param {Integer} n - The lookahead depth.
      */
-    _PeekToken() {
-        if (this._peekedToken == "") {
-            this._peekedToken := this._scanner.FetchToken()
+    _PeekToken(n := 1) {
+        while (this._tokens.Length < n) {
+            _t := this._scanner.FetchToken()
+            this._tokens.Push(_t)
+            if (_t.Type == "StreamEnd") {
+                break
+            }
         }
-        return this._peekedToken
+        return (n <= this._tokens.Length) ? this._tokens[n] : this._tokens[this._tokens.Length]
     }
 
     /**
      * @method _FetchToken
-     * Returns and consumes the next token.
+     * Returns and consumes the next token from the queue or scanner.
      */
     _FetchToken() {
-        if (this._peekedToken != "") {
-            _token := this._peekedToken
-            this._peekedToken := ""
-            return _token
+        if (this._tokens.Length > 0) {
+            return this._tokens.RemoveAt(1)
         }
         return this._scanner.FetchToken()
     }
 
     /**
      * @method _StateStreamStart
-     * Initial state: emits StreamStart and moves to DocumentStart.
+     * Initial state: emits StreamStart.
      */
     _StateStreamStart() {
         this._states.Pop()
-        this._states.Push(this._StateDocumentStart.Bind(this))
+        this._states.Push("_StateDocumentStart")
         return YamlStreamStartEvent()
     }
 
@@ -94,14 +95,12 @@ class _YamlParser {
      */
     _StateDocumentStart() {
         _token := this._PeekToken()
-
-        ; Handle Stream End
+        
         if (_token.Type == "StreamEnd") {
             this._states.Pop()
             return YamlStreamEndEvent()
         }
 
-        ; Explicit Document Start '---'
         _explicit := false
         if (_token.Type == "DocumentStart") {
             this._FetchToken()
@@ -109,9 +108,9 @@ class _YamlParser {
         }
 
         this._states.Pop()
-        this._states.Push(this._StateDocumentEnd.Bind(this))
-        this._states.Push(this._StateBlockNode.Bind(this))
-
+        this._states.Push("_StateDocumentEnd")
+        this._states.Push("_StateBlockNode")
+        
         return YamlDocumentStartEvent(_explicit, _token.Line, _token.Column)
     }
 
@@ -121,7 +120,7 @@ class _YamlParser {
      */
     _StateDocumentEnd() {
         this._states.Pop()
-        this._states.Push(this._StateDocumentStart.Bind(this))
+        this._states.Push("_StateDocumentStart")
         return YamlDocumentEndEvent(false)
     }
 
@@ -130,13 +129,79 @@ class _YamlParser {
      * Handles nodes in a block context (Scalar, Mapping, Sequence).
      */
     _StateBlockNode() {
-        _token := this._FetchToken()
-
+        _token := this._PeekToken()
+        
         if (_token.Type == "Scalar") {
+            _next := this._PeekToken(2)
+            
+            if (_next.Type == "MappingIndicator") {
+                ; Transition to Mapping: Send MappingStart and then process keys
+                this._states.Pop()
+                this._states.Push("_StateBlockMappingEnd")
+                this._states.Push("_StateBlockMappingKey")
+                return YamlMappingStartEvent("", "", false, _token.Line, _token.Column)
+            }
+            
+            ; Simple scalar node
+            this._FetchToken()
             this._states.Pop()
             return YamlScalarEvent(_token.Value, "", "", 0, _token.Line, _token.Column)
         }
-
+        
+        ; Handle empty values (Implicit null)
+        if (_token.Type == "Dedent" || _token.Type == "StreamEnd" || _token.Type == "DocumentStart") {
+            this._states.Pop()
+            return YamlScalarEvent("", "", "", 0, _token.Line, _token.Column)
+        }
+        
         throw YamlError("Expected scalar, but found " . _token.Type, _token.Line, _token.Column)
+    }
+
+    /**
+     * @method _StateBlockMappingKey
+     * Decides whether to continue the mapping or end it based on the next token.
+     */
+    _StateBlockMappingKey() {
+        _token := this._PeekToken()
+        
+        if (_token.Type == "Dedent" || _token.Type == "StreamEnd" || _token.Type == "DocumentStart") {
+            this._states.Pop()
+            return this.NextEvent() ; Proceed to BlockMappingEnd
+        }
+        
+        if (_token.Type == "Scalar") {
+            this._states.Pop()
+            this._states.Push("_StateBlockMappingValue")
+            return this.NextEvent()
+        }
+
+        ; Consume virtual tokens and retry
+        this._FetchToken()
+        return this._StateBlockMappingKey()
+    }
+
+    /**
+     * @method _StateBlockMappingValue
+     * Processes a single key-value pair in a block mapping.
+     */
+    _StateBlockMappingValue() {
+        _keyToken := this._FetchToken() ; Consumes Key Scalar
+        _indicator := this._FetchToken() ; Consumes ':'
+        
+        ; Transition: To see if there are more pairs, but parse the value first
+        this._states.Pop()
+        this._states.Push("_StateBlockMappingKey") 
+        this._states.Push("_StateBlockNode") 
+        
+        return YamlScalarEvent(_keyToken.Value, "", "", 0, _keyToken.Line, _keyToken.Column)
+    }
+
+    /**
+     * @method _StateBlockMappingEnd
+     * Emits MappingEnd event.
+     */
+    _StateBlockMappingEnd() {
+        this._states.Pop()
+        return YamlMappingEndEvent()
     }
 }

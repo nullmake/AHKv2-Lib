@@ -23,4 +23,30 @@ class ParserTest {
         Assert.Equal("YamlDocumentEndEvent", Type(_parser.NextEvent()))
         Assert.Equal("YamlStreamEndEvent", Type(_parser.NextEvent()))
     }
+
+    /**
+     * @method Test_ParseSimpleMapping
+     * Verifies that a one-level mapping produces MappingStart/End events.
+     */
+    Test_ParseSimpleMapping() {
+        _scanner := _YamlScanner("name: value")
+        _parser := _YamlParser(_scanner)
+        
+        Assert.Equal("YamlStreamStartEvent", Type(_parser.NextEvent()))
+        Assert.Equal("YamlDocumentStartEvent", Type(_parser.NextEvent()))
+        
+        Assert.Equal("YamlMappingStartEvent", Type(_parser.NextEvent()))
+        
+        _keyEvent := _parser.NextEvent()
+        Assert.Equal("YamlScalarEvent", Type(_keyEvent))
+        Assert.Equal("name", _keyEvent.value)
+        
+        _valEvent := _parser.NextEvent()
+        Assert.Equal("YamlScalarEvent", Type(_valEvent))
+        Assert.Equal("value", _valEvent.value)
+        
+        Assert.Equal("YamlMappingEndEvent", Type(_parser.NextEvent()))
+        Assert.Equal("YamlDocumentEndEvent", Type(_parser.NextEvent()))
+        Assert.Equal("YamlStreamEndEvent", Type(_parser.NextEvent()))
+    }
 }
