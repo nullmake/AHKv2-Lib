@@ -6,16 +6,16 @@
  */
 class AssertTest {
     /**
-     * @method Test_Equal_ShouldPassWhenValuesAreEqual
-     */
+    * @method Test_Equal_ShouldPassWhenValuesAreEqual
+    */
     Test_Equal_ShouldPassWhenValuesAreEqual() {
         Assert.Equal(1, 1)
         Assert.Equal("abc", "ABC", "String comparison should be case-insensitive by default.")
     }
 
     /**
-     * @method Test_Equal_ShouldFailWhenValuesAreDifferent
-     */
+    * @method Test_Equal_ShouldFailWhenValuesAreDifferent
+    */
     Test_Equal_ShouldFailWhenValuesAreDifferent() {
         try {
             Assert.Equal(1, 2)
@@ -26,8 +26,8 @@ class AssertTest {
     }
 
     /**
-     * @method Test_StrictEqual_ShouldBeCaseSensitive
-     */
+    * @method Test_StrictEqual_ShouldBeCaseSensitive
+    */
     Test_StrictEqual_ShouldBeCaseSensitive() {
         Assert.StrictEqual("abc", "abc")
         try {
@@ -39,16 +39,16 @@ class AssertTest {
     }
 
     /**
-     * @method Test_TrueAndFalse
-     */
+    * @method Test_TrueAndFalse
+    */
     Test_TrueAndFalse() {
         Assert.True(1 == 1)
         Assert.False(1 == 2)
     }
 
     /**
-     * @method Test_NotEqual
-     */
+    * @method Test_NotEqual
+    */
     Test_NotEqual() {
         Assert.NotEqual(1, 2)
         try {

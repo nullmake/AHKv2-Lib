@@ -23,13 +23,13 @@ class YamlError extends Error {
     snippet := ""
 
     /**
-     * @constructor
-     * @param {String} message - Description of the error.
-     * @param {Integer} line - Line number (optional).
-     * @param {Integer} column - Column number (optional).
-     * @param {String} snippet - Source context (optional).
-     * @param {Integer} what - Stack offset for the error location.
-     */
+    * @constructor
+    * @param {String} message - Description of the error.
+    * @param {Integer} line - Line number (optional).
+    * @param {Integer} column - Column number (optional).
+    * @param {String} snippet - Source context (optional).
+    * @param {Integer} what - Stack offset for the error location.
+    */
     __New(message, line := 0, column := 0, snippet := "", what := -1) {
         detail := message
         if (line > 0) {

@@ -5,55 +5,55 @@
  * @description Tokenizes YAML character stream and manages indentation.
  * @author nullmake
  * @license Apache-2.0
- * 
+ *
  * Copyright 2026 nullmake
  */
 
 class _YamlScanner {
     /**
-     * @field {String} _source - Normalized source text.
-     */
+    * @field {String} _source - Normalized source text.
+    */
     _source := ""
 
     /**
-     * @field {Integer} _pos - Current character position (1-based).
-     */
+    * @field {Integer} _pos - Current character position (1-based).
+    */
     _pos := 1
 
     /**
-     * @field {Integer} _line - Current line number (1-based).
-     */
+    * @field {Integer} _line - Current line number (1-based).
+    */
     _line := 1
 
     /**
-     * @field {Integer} _column - Current column number (1-based).
-     */
+    * @field {Integer} _column - Current column number (1-based).
+    */
     _column := 1
 
     /**
-     * @field {Integer} _length - Total length of the source.
-     */
+    * @field {Integer} _length - Total length of the source.
+    */
     _length := 0
 
     /**
-     * @field {Array} _indentStack - Stack of indentation levels (absolute columns).
-     */
+    * @field {Array} _indentStack - Stack of indentation levels (absolute columns).
+    */
     _indentStack := [0]
 
     /**
-     * @field {Array} _pendingTokens - Queue for Indent/Dedent/Document tokens.
-     */
+    * @field {Array} _pendingTokens - Queue for Indent/Dedent/Document tokens.
+    */
     _pendingTokens := []
 
     /**
-     * @field {Boolean} _isAtLineStart - Flag to trigger indentation check.
-     */
+    * @field {Boolean} _isAtLineStart - Flag to trigger indentation check.
+    */
     _isAtLineStart := true
 
     /**
-     * @constructor
-     * @param {String} input - Raw YAML string.
-     */
+    * @constructor
+    * @param {String} input - Raw YAML string.
+    */
     __New(input) {
         ; Normalize line breaks to \n (YAML 1.2.2 - 5.4)
         _source := StrReplace(input, "`r`n", "`n")
@@ -62,10 +62,10 @@ class _YamlScanner {
     }
 
     /**
-     * @method FetchToken
-     * Advances and returns the next token from the stream.
-     * @returns {Object} Token object {type, value, line, column}
-     */
+    * @method FetchToken
+    * Advances and returns the next token from the stream.
+    * @returns {Object} Token object {type, value, line, column}
+    */
     FetchToken() {
         ; Return queued tokens first (virtual Indent/Dedent)
         if (this._pendingTokens.Length > 0) {
@@ -148,8 +148,8 @@ class _YamlScanner {
     }
 
     /**
-     * @method _HandleLineStart
-     */
+    * @method _HandleLineStart
+    */
     _HandleLineStart() {
         this._isAtLineStart := false
         _currentIndent := 0
@@ -196,22 +196,22 @@ class _YamlScanner {
     }
 
     /**
-     * @method _UnrollIndents
-     */
+    * @method _UnrollIndents
+    */
     _UnrollIndents(targetIndent) {
         while (this._indentStack.Length > 1 && this._indentStack[this._indentStack.Length] > targetIndent) {
             this._indentStack.Pop()
             this._pendingTokens.Push({type: "Dedent", value: "", line: this._line, column: 1})
         }
-        
+
         if (this._indentStack[this._indentStack.Length] != targetIndent) {
-             throw YamlError("Indentation level mismatch", this._line, targetIndent + 1)
+            throw YamlError("Indentation level mismatch", this._line, targetIndent + 1)
         }
     }
 
     /**
-     * @method _SkipWhitespaceAndComments
-     */
+    * @method _SkipWhitespaceAndComments
+    */
     _SkipWhitespaceAndComments() {
         loop {
             this._SkipWhitespace()
@@ -225,8 +225,8 @@ class _YamlScanner {
     }
 
     /**
-     * @method _SkipWhitespace
-     */
+    * @method _SkipWhitespace
+    */
     _SkipWhitespace() {
         while (this._pos <= this._length) {
             _char := SubStr(this._source, this._pos, 1)
@@ -239,9 +239,9 @@ class _YamlScanner {
     }
 
     /**
-     * @method _SkipComment
-     * Consumes characters from '#' until the next line break.
-     */
+    * @method _SkipComment
+    * Consumes characters from '#' until the next line break.
+    */
     _SkipComment() {
         while (this._pos <= this._length && SubStr(this._source, this._pos, 1) != "`n") {
             this._Move(1)
@@ -249,39 +249,39 @@ class _YamlScanner {
     }
 
     /**
-     * @method _ScanQuotedScalar
-     * Reads a string enclosed in double or single quotes.
-     * @param {String} quote - The opening quote character.
-     */
+    * @method _ScanQuotedScalar
+    * Reads a string enclosed in double or single quotes.
+    * @param {String} quote - The opening quote character.
+    */
     _ScanQuotedScalar(quote) {
         _startLine := this._line
         _startCol := this._column
         this._Move(1) ; Consume opening quote
-        
+
         _val := ""
         while (this._pos <= this._length) {
             _char := SubStr(this._source, this._pos, 1)
-            
+
             if (_char == quote) {
                 this._Move(1) ; Consume closing quote
                 return {type: "Scalar", value: _val, line: _startLine, column: _startCol}
             }
-            
+
             if (_char == "`n") {
                 this._line++
                 this._column := 1
             }
-            
+
             _val .= _char
             this._Move(1)
         }
-        
+
         throw YamlError("Unclosed quoted scalar", _startLine, _startCol)
     }
 
     /**
-     * @method _IsFollowedByWhitespace
-     */
+    * @method _IsFollowedByWhitespace
+    */
     _IsFollowedByWhitespace(pos) {
         if (pos > this._length) {
             return true
@@ -291,8 +291,8 @@ class _YamlScanner {
     }
 
     /**
-     * @method _Move
-     */
+    * @method _Move
+    */
     _Move(count) {
         this._pos += count
         this._column += count

@@ -5,15 +5,15 @@
  * @description Pure infrastructure utility for window operations.
  * @author nullmake
  * @license Apache-2.0
- * 
+ *
  * Copyright 2026 nullmake
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -27,15 +27,15 @@
  */
 class Window {
     /**
-     * Switches to the next window.
-     */
+    * Switches to the next window.
+    */
     static Next() {
         Send("!{Tab}")
     }
 
     /**
-     * Switches to the previous window.
-     */
+    * Switches to the previous window.
+    */
     static Prev() {
         Send("!+{Tab}")
     }

@@ -5,7 +5,7 @@
  * @description Converts event streams to character streams (Emitter).
  * @author nullmake
  * @license Apache-2.0
- * 
+ *
  * Copyright 2026 nullmake
  */
 

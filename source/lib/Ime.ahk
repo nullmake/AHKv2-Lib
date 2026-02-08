@@ -5,15 +5,15 @@
  * @description Pure infrastructure utility for Input Method Editor (IME) operations.
  * @author nullmake
  * @license Apache-2.0
- * 
+ *
  * Copyright 2026 nullmake
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -35,11 +35,11 @@ class Ime {
     static IMC_SETOPENSTATUS => 0x0006
 
     /**
-     * @method GetStatus
-     * Gets current IME status (Open/Closed).
-     * @param {String} winTitle - Target window (default "A" for active window)
-     * @returns {Integer} 1 for Open (ON), 0 for Closed (OFF)
-     */
+    * @method GetStatus
+    * Gets current IME status (Open/Closed).
+    * @param {String} winTitle - Target window (default "A" for active window)
+    * @returns {Integer} 1 for Open (ON), 0 for Closed (OFF)
+    */
     static GetStatus(winTitle := "A") {
         hwnd := WinExist(winTitle)
         if (!hwnd) {
@@ -63,11 +63,11 @@ class Ime {
     }
 
     /**
-     * @method SetStatus
-     * Sets IME status (Open/Closed).
-     * @param {Integer} setStatus - 1 for Open (ON), 0 for Closed (OFF)
-     * @param {String} winTitle - Target window (default "A" for active window)
-     */
+    * @method SetStatus
+    * Sets IME status (Open/Closed).
+    * @param {Integer} setStatus - 1 for Open (ON), 0 for Closed (OFF)
+    * @param {String} winTitle - Target window (default "A" for active window)
+    */
     static SetStatus(setStatus, winTitle := "A") {
         hwnd := WinExist(winTitle)
         if (!hwnd) {

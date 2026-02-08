@@ -5,15 +5,15 @@
  * @description Represents a normalized keyboard event.
  * @author nullmake
  * @license Apache-2.0
- * 
+ *
  * Copyright 2026 nullmake
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -35,11 +35,11 @@ class KeyEvent {
     IsPhysical := 0
 
     /**
-     * Creates a new KeyEvent instance.
-     * @param {String} name - Key name.
-     * @param {Integer} isDown - State.
-     * @param {Integer} isPhysical - Physical flag.
-     */
+    * Creates a new KeyEvent instance.
+    * @param {String} name - Key name.
+    * @param {Integer} isDown - State.
+    * @param {Integer} isPhysical - Physical flag.
+    */
     __New(name, isDown, isPhysical := 1) {
         this.Name := name
         this.IsDown := isDown

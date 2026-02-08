@@ -58,10 +58,10 @@ class YamlMappingNode extends YamlNode {
     }
 
     /**
-     * @method Add
-     * @param {YamlNode} keyNode
-     * @param {YamlNode} valueNode
-     */
+    * @method Add
+    * @param {YamlNode} keyNode
+    * @param {YamlNode} valueNode
+    */
     Add(keyNode, valueNode) {
         this.children.Push({Key: keyNode, Value: valueNode})
     }

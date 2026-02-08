@@ -5,15 +5,15 @@
  * @description Adapter Layer that encapsulates WH_KEYBOARD_LL.
  * @author nullmake
  * @license Apache-2.0
- * 
+ *
  * Copyright 2026 nullmake
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -45,9 +45,9 @@ class KeyboardHook {
     onEvent := ""
 
     /**
-     * Constructor: __New
-     * @param {Function} onEventCallback - Function to call when a key event occurs.
-     */
+    * Constructor: __New
+    * @param {Function} onEventCallback - Function to call when a key event occurs.
+    */
     __New(onEventCallback) {
         this.onEvent := onEventCallback
         ; Ensure the callback is tied to this instance
@@ -55,9 +55,9 @@ class KeyboardHook {
     }
 
     /**
-     * Method: Start
-     * Begins capturing keyboard input.
-     */
+    * Method: Start
+    * Begins capturing keyboard input.
+    */
     Start() {
         if (this.hHook) {
             return
@@ -73,9 +73,9 @@ class KeyboardHook {
     }
 
     /**
-     * Method: Stop
-     * Releases the hook.
-     */
+    * Method: Stop
+    * Releases the hook.
+    */
     Stop() {
         if (this.hHook) {
             DllCall("UnhookWindowsHookEx", "Ptr", this.hHook)
@@ -84,8 +84,8 @@ class KeyboardHook {
     }
 
     /**
-     * Clean up on destruction.
-     */
+    * Clean up on destruction.
+    */
     __Delete() {
         this.Stop()
         if (this.proc) {
@@ -94,12 +94,12 @@ class KeyboardHook {
     }
 
     /**
-     * Low-level Hook Callback Procedure.
-     * @param {Integer} nCode
-     * @param {Integer} wParam
-     * @param {Integer} lParam
-     * @private
-     */
+    * Low-level Hook Callback Procedure.
+    * @param {Integer} nCode
+    * @param {Integer} wParam
+    * @param {Integer} lParam
+    * @private
+    */
     _LowLevelKeyboardProc(nCode, wParam, lParam) {
         try {
             if (nCode >= 0) {
@@ -115,12 +115,12 @@ class KeyboardHook {
     }
 
     /**
-     * Parse raw input and dispatch as KeyEvent.
-     * @param {Integer} wParam - Message ID (WM_KEYDOWN, etc.)
-     * @param {Ptr} lParam - Pointer to KBDLLHOOKSTRUCT
-     * @returns {Integer} 1 to suppress the event, 0 to allow it.
-     * @private
-     */
+    * Parse raw input and dispatch as KeyEvent.
+    * @param {Integer} wParam - Message ID (WM_KEYDOWN, etc.)
+    * @param {Ptr} lParam - Pointer to KBDLLHOOKSTRUCT
+    * @returns {Integer} 1 to suppress the event, 0 to allow it.
+    * @private
+    */
     _HandleRawInput(wParam, lParam) {
         ; Extract Virtual Key Code and Flags from KBDLLHOOKSTRUCT
         vkCode := NumGet(lParam, 0, "UInt")
@@ -151,9 +151,9 @@ class KeyboardHook {
     }
 
     /**
-     * Logs error messages to the debug output without external dependencies.
-     * @param {Error} err - The error object to log.
-     */
+    * Logs error messages to the debug output without external dependencies.
+    * @param {Error} err - The error object to log.
+    */
     _SafeLog(err) {
         ; Use OutputDebug to avoid dependency on Logger class
         OutputDebug("Kyuri Hook Error: " . err.Message . " (" . err.Line . ")")

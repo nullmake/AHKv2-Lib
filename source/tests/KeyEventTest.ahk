@@ -6,8 +6,8 @@
  */
 class KeyEventTest {
     /**
-     * @method Test_Constructor_ShouldSetPropertiesCorrectly
-     */
+    * @method Test_Constructor_ShouldSetPropertiesCorrectly
+    */
     Test_Constructor_ShouldSetPropertiesCorrectly() {
         ; Case 1: Physical Key Down
         ev1 := KeyEvent("vk1D", true, true)
@@ -23,8 +23,8 @@ class KeyEventTest {
     }
 
     /**
-     * @method Test_Constructor_ShouldDefaultToPhysical
-     */
+    * @method Test_Constructor_ShouldDefaultToPhysical
+    */
     Test_Constructor_ShouldDefaultToPhysical() {
         ev := KeyEvent("Space", true)
         Assert.True(ev.IsPhysical, "Default should be physical (1).")

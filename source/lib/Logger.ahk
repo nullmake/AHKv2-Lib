@@ -5,15 +5,15 @@
  * @description Buffers logs in memory and flushes to rotating files.
  * @author nullmake
  * @license Apache-2.0
- * 
+ *
  * Copyright 2026 nullmake
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -41,9 +41,9 @@ class Logger {
     pid := DllCall("GetCurrentProcessId")
 
     /**
-     * @property Enabled
-     * Handles switching and clears buffer when disabled.
-     */
+    * @property Enabled
+    * Handles switching and clears buffer when disabled.
+    */
     Enabled {
         get => this._enabled
         set {
@@ -55,13 +55,13 @@ class Logger {
     }
 
     /**
-     * @method __New
-     * @constructor
-     * @param {String} logDir - Full path to the log directory.
-     * @param {Integer} maxEntries - Buffer size limit.
-     * @param {Integer} maxFiles - Maximum history files.
-     * @param {Boolean} enabled - Initial logging state.
-     */
+    * @method __New
+    * @constructor
+    * @param {String} logDir - Full path to the log directory.
+    * @param {Integer} maxEntries - Buffer size limit.
+    * @param {Integer} maxFiles - Maximum history files.
+    * @param {Boolean} enabled - Initial logging state.
+    */
     __New(logDir, maxEntries := 1000, maxFiles := 30, enabled := true) {
         this.logDir := logDir
         this.maxEntries := maxEntries
@@ -74,35 +74,35 @@ class Logger {
     }
 
     /**
-     * @method Info
-     */
+    * @method Info
+    */
     Info(message) => this.Log("INFO", message)
 
     /**
-     * @method Warn
-     */
+    * @method Warn
+    */
     Warn(message) {
         this.Log("WARN", message)
         this.Flush("WRN")
     }
 
     /**
-     * @method Error
-     * @param {String} message - Error description.
-     * @param {Error} err - (Optional) The Error object.
-     */
+    * @method Error
+    * @param {String} message - Error description.
+    * @param {Error} err - (Optional) The Error object.
+    */
     Error(message, err := unset) {
         this.Log("ERROR", message, err?)
         this.Flush("ERR")
     }
 
     /**
-     * @method Log
-     * Handles metadata extraction and buffering. (Internal)
-     * @param {String} level - INFO, WARN, ERROR, etc.
-     * @param {String} msg - The message.
-     * @param {Error} err - (Optional) The Error object.
-     */
+    * @method Log
+    * Handles metadata extraction and buffering. (Internal)
+    * @param {String} level - INFO, WARN, ERROR, etc.
+    * @param {String} msg - The message.
+    * @param {Error} err - (Optional) The Error object.
+    */
     Log(level, msg, err := unset) {
         if (!this.Enabled) {
             return
@@ -133,10 +133,10 @@ class Logger {
     }
 
     /**
-     * @method Flush
-     * Writes the current full buffer to a file. Does NOT clear the buffer.
-     * @param {String} trigger - Label for the filename (Default: MAN).
-     */
+    * @method Flush
+    * Writes the current full buffer to a file. Does NOT clear the buffer.
+    * @param {String} trigger - Label for the filename (Default: MAN).
+    */
     Flush(trigger := "MAN") {
         if (!this.Enabled || this.buffer.Length == 0) {
             return
@@ -163,9 +163,9 @@ class Logger {
     }
 
     /**
-     * @method Rotate
-     * Efficiently rotates logs using the built-in Sort function.
-     */
+    * @method Rotate
+    * Efficiently rotates logs using the built-in Sort function.
+    */
     Rotate() {
         filePaths := ""
         loop files, this.logDir . "\kyuri_*.log" {

@@ -5,15 +5,15 @@
  * @description Basic xUnit-style test executor for AutoHotkey v2.
  * @author nullmake
  * @license Apache-2.0
- * 
+ *
  * Copyright 2026 nullmake
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -33,19 +33,19 @@ class TestRunner {
     suiteResults := []
 
     /**
-     * Constructor: __New
-     * @param {Logger} logSvc
-     */
+    * Constructor: __New
+    * @param {Logger} logSvc
+    */
     __New(logSvc) {
         this.log := logSvc
     }
 
     /**
-     * Method: Run
-     * Runs all methods starting with 'Test_' in the given class instance.
-     * @param {Object} testSuite - Instance of a test class.
-     * @returns {Boolean} - True if all tests in this suite passed.
-     */
+    * Method: Run
+    * Runs all methods starting with 'Test_' in the given class instance.
+    * @param {Object} testSuite - Instance of a test class.
+    * @returns {Boolean} - True if all tests in this suite passed.
+    */
     Run(testSuite) {
         suiteName := Type(testSuite)
         this.log.Info(">>> Starting Test Suite: " . suiteName)
@@ -90,9 +90,9 @@ class TestRunner {
     }
 
     /**
-     * Method: PrintFinalSummary
-     * Logs a formatted summary of all executed test suites.
-     */
+    * Method: PrintFinalSummary
+    * Logs a formatted summary of all executed test suites.
+    */
     PrintFinalSummary() {
         this.log.Info("========================================")
         this.log.Info("FINAL TEST SUMMARY")
@@ -107,7 +107,7 @@ class TestRunner {
             line := Format("{1:-7s} {2:-25s} (Pass: {3}, Fail: {4})",
                 status, result.Name, result.Pass, result.Fail)
             this.log.Info(line)
-            
+
             totalPass += result.Pass
             totalFail += result.Fail
         }

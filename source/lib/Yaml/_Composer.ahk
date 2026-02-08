@@ -5,7 +5,7 @@
  * @description Resolves anchors and builds node graphs.
  * @author nullmake
  * @license Apache-2.0
- * 
+ *
  * Copyright 2026 nullmake
  */
 
@@ -15,34 +15,34 @@
  */
 class _YamlComposer {
     /**
-     * @field {Object} _parser - YAML event source.
-     */
+    * @field {Object} _parser - YAML event source.
+    */
     _parser := ""
 
     /**
-     * @constructor
-     * @param {Object} parser - An instance of _YamlParser.
-     */
+    * @constructor
+    * @param {Object} parser - An instance of _YamlParser.
+    */
     __New(parser) {
         this._parser := parser
     }
 
     /**
-     * @method Compose
-     * Composes the entire document and returns the root node.
-     * @returns {YamlNode}
-     */
+    * @method Compose
+    * Composes the entire document and returns the root node.
+    * @returns {YamlNode}
+    */
     Compose() {
         _event := this._parser.NextEvent() ; StreamStart
         if (!(_event is YamlStreamStartEvent)) {
             return ""
         }
-        
+
         _event := this._parser.NextEvent()
         if (_event is YamlStreamEndEvent) {
             return ""
         }
-        
+
         ; Assume single document for now
         if (_event is YamlDocumentStartEvent) {
             _node := this._ComposeNode()
@@ -50,22 +50,22 @@ class _YamlComposer {
             this._parser.NextEvent() ; StreamEnd
             return _node
         }
-        
+
         return ""
     }
 
     /**
-     * @method _ComposeNode
-     * Recursively composes a single node from events.
-     * @returns {YamlNode}
-     */
+    * @method _ComposeNode
+    * Recursively composes a single node from events.
+    * @returns {YamlNode}
+    */
     _ComposeNode() {
         _event := this._parser.NextEvent()
-        
+
         if (_event is YamlScalarEvent) {
             return YamlScalarNode(_event.value, _event.tag, _event.anchor, _event.style)
         }
-        
+
         if (_event is YamlMappingStartEvent) {
             _node := YamlMappingNode(_event.tag, _event.anchor)
             loop {
@@ -74,7 +74,7 @@ class _YamlComposer {
                 if (_nextEvent is YamlMappingEndEvent) {
                     break
                 }
-                
+
                 ; Mapping events: Key (Scalar) then Value (Recursive)
                 _keyNode := YamlScalarNode(_nextEvent.value, _nextEvent.tag, _nextEvent.anchor, _nextEvent.style)
                 _valueNode := this._ComposeNode()
@@ -82,7 +82,7 @@ class _YamlComposer {
             }
             return _node
         }
-        
+
         if (_event is YamlSequenceStartEvent) {
             _node := YamlSequenceNode(_event.tag, _event.anchor)
             loop {
@@ -90,26 +90,26 @@ class _YamlComposer {
                 if (_nextEvent is YamlSequenceEndEvent) {
                     break
                 }
-                
+
                 ; For sequences, each event starts a new node
                 _itemNode := this._ComposeNodeFromEvent(_nextEvent)
                 _node.children.Push(_itemNode)
             }
             return _node
         }
-        
+
         return ""
     }
 
     /**
-     * @method _ComposeNodeFromEvent
-     * Handles starting a node construction when the first event is already fetched.
-     */
+    * @method _ComposeNodeFromEvent
+    * Handles starting a node construction when the first event is already fetched.
+    */
     _ComposeNodeFromEvent(_event) {
         if (_event is YamlScalarEvent) {
             return YamlScalarNode(_event.value, _event.tag, _event.anchor, _event.style)
         }
-        
+
         if (_event is YamlMappingStartEvent || _event is YamlSequenceStartEvent) {
             ; If it's a collection start, we need to push it back or handle recursion.
             ; For simplicity, we re-inject the state or call _ComposeNode with a modified parser.
@@ -122,16 +122,16 @@ class _YamlComposer {
     }
 
     /**
-     * @method _ComposeNodeExtended
-     * Extended version of _ComposeNode that can start from a pre-fetched event.
-     */
+    * @method _ComposeNodeExtended
+    * Extended version of _ComposeNode that can start from a pre-fetched event.
+    */
     _ComposeNodeExtended(_initialEvent) {
         _event := _initialEvent
-        
+
         if (_event is YamlScalarEvent) {
             return YamlScalarNode(_event.value, _event.tag, _event.anchor, _event.style)
         }
-        
+
         if (_event is YamlMappingStartEvent) {
             _node := YamlMappingNode(_event.tag, _event.anchor)
             loop {
@@ -145,7 +145,7 @@ class _YamlComposer {
             }
             return _node
         }
-        
+
         if (_event is YamlSequenceStartEvent) {
             _node := YamlSequenceNode(_event.tag, _event.anchor)
             loop {
@@ -158,7 +158,7 @@ class _YamlComposer {
             }
             return _node
         }
-        
+
         return ""
     }
 }
