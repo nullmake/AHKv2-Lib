@@ -47,12 +47,20 @@ if ($ahkExe -eq "") {
 }
 
 # 3. Run AHK v2 script
-$process = Start-Process -FilePath $ahkExe -ArgumentList "/ErrorStdOut", "`"$TestScript`"", "`"$LogDir`"" -WorkingDirectory $TestDir -Wait -PassThru -NoNewWindow
+# Use call operator (&) and 2>&1 to capture stdout and stderr.
+# Piping to Out-String forces PowerShell to wait for the GUI process to finish.
+Push-Location $TestDir
+$ahkOutput = & $ahkExe /ErrorStdOut "$TestScript" "$LogDir" 2>&1 | Out-String
+$exitCode = $LASTEXITCODE
+Pop-Location
 
 # 4. Report Results
-if ($null -eq $process -or $process.ExitCode -ne 0) {
-    $exitCode = if ($null -eq $process) { 1 } else { $process.ExitCode }
+if ($exitCode -ne 0) {
     Write-Host "!!! Tests Failed (ExitCode: $exitCode)" -ForegroundColor Red
+    if ($ahkOutput) {
+        Write-Host "`n--- AutoHotkey Output/Errors ---" -ForegroundColor Yellow
+        $ahkOutput | Out-String | Write-Host
+    }
 } else {
     Write-Host "+++ All Tests Passed!" -ForegroundColor Green
 }
@@ -67,4 +75,4 @@ if ([System.IO.Directory]::Exists($LogDir)) {
     }
 }
 
-if ($null -eq $process) { exit 1 } else { exit $process.ExitCode }
+exit $exitCode
