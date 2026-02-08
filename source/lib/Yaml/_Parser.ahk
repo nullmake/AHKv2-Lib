@@ -5,7 +5,7 @@
  * @description Syntactic analysis and event generation.
  * @author nullmake
  * @license Apache-2.0
- * 
+ *
  * Copyright 2026 nullmake
  */
 
@@ -47,7 +47,7 @@ class _YamlParser {
         if (this._states.Length == 0) {
             return ""
         }
-        
+
         _stateName := this._states[this._states.Length]
         return this.%_stateName%()
     }
@@ -95,7 +95,7 @@ class _YamlParser {
      */
     _StateDocumentStart() {
         _token := this._PeekToken()
-        
+
         if (_token.Type == "StreamEnd") {
             this._states.Pop()
             return YamlStreamEndEvent()
@@ -110,7 +110,7 @@ class _YamlParser {
         this._states.Pop()
         this._states.Push("_StateDocumentEnd")
         this._states.Push("_StateBlockNode")
-        
+
         return YamlDocumentStartEvent(_explicit, _token.Line, _token.Column)
     }
 
@@ -130,10 +130,10 @@ class _YamlParser {
      */
     _StateBlockNode() {
         _token := this._PeekToken()
-        
+
         if (_token.Type == "Scalar") {
             _next := this._PeekToken(2)
-            
+
             if (_next.Type == "MappingIndicator") {
                 ; Transition to Mapping: Send MappingStart and then process keys
                 this._states.Pop()
@@ -141,19 +141,19 @@ class _YamlParser {
                 this._states.Push("_StateBlockMappingKey")
                 return YamlMappingStartEvent("", "", false, _token.Line, _token.Column)
             }
-            
+
             ; Simple scalar node
             this._FetchToken()
             this._states.Pop()
             return YamlScalarEvent(_token.Value, "", "", 0, _token.Line, _token.Column)
         }
-        
+
         ; Handle empty values (Implicit null)
         if (_token.Type == "Dedent" || _token.Type == "StreamEnd" || _token.Type == "DocumentStart") {
             this._states.Pop()
             return YamlScalarEvent("", "", "", 0, _token.Line, _token.Column)
         }
-        
+
         throw YamlError("Expected scalar, but found " . _token.Type, _token.Line, _token.Column)
     }
 
@@ -163,12 +163,12 @@ class _YamlParser {
      */
     _StateBlockMappingKey() {
         _token := this._PeekToken()
-        
+
         if (_token.Type == "Dedent" || _token.Type == "StreamEnd" || _token.Type == "DocumentStart") {
             this._states.Pop()
             return this.NextEvent() ; Proceed to BlockMappingEnd
         }
-        
+
         if (_token.Type == "Scalar") {
             this._states.Pop()
             this._states.Push("_StateBlockMappingValue")
@@ -187,12 +187,12 @@ class _YamlParser {
     _StateBlockMappingValue() {
         _keyToken := this._FetchToken() ; Consumes Key Scalar
         _indicator := this._FetchToken() ; Consumes ':'
-        
+
         ; Transition: To see if there are more pairs, but parse the value first
         this._states.Pop()
-        this._states.Push("_StateBlockMappingKey") 
-        this._states.Push("_StateBlockNode") 
-        
+        this._states.Push("_StateBlockMappingKey")
+        this._states.Push("_StateBlockNode")
+
         return YamlScalarEvent(_keyToken.Value, "", "", 0, _keyToken.Line, _keyToken.Column)
     }
 

@@ -12,14 +12,14 @@ class ParserTest {
     Test_ParseSimpleScalar() {
         _scanner := _YamlScanner("hello")
         _parser := _YamlParser(_scanner)
-        
+
         Assert.Equal("YamlStreamStartEvent", Type(_parser.NextEvent()))
         Assert.Equal("YamlDocumentStartEvent", Type(_parser.NextEvent()))
-        
+
         _scalarEvent := _parser.NextEvent()
         Assert.Equal("YamlScalarEvent", Type(_scalarEvent))
         Assert.Equal("hello", _scalarEvent.value)
-        
+
         Assert.Equal("YamlDocumentEndEvent", Type(_parser.NextEvent()))
         Assert.Equal("YamlStreamEndEvent", Type(_parser.NextEvent()))
     }
@@ -31,20 +31,20 @@ class ParserTest {
     Test_ParseSimpleMapping() {
         _scanner := _YamlScanner("name: value")
         _parser := _YamlParser(_scanner)
-        
+
         Assert.Equal("YamlStreamStartEvent", Type(_parser.NextEvent()))
         Assert.Equal("YamlDocumentStartEvent", Type(_parser.NextEvent()))
-        
+
         Assert.Equal("YamlMappingStartEvent", Type(_parser.NextEvent()))
-        
+
         _keyEvent := _parser.NextEvent()
         Assert.Equal("YamlScalarEvent", Type(_keyEvent))
         Assert.Equal("name", _keyEvent.value)
-        
+
         _valEvent := _parser.NextEvent()
         Assert.Equal("YamlScalarEvent", Type(_valEvent))
         Assert.Equal("value", _valEvent.value)
-        
+
         Assert.Equal("YamlMappingEndEvent", Type(_parser.NextEvent()))
         Assert.Equal("YamlDocumentEndEvent", Type(_parser.NextEvent()))
         Assert.Equal("YamlStreamEndEvent", Type(_parser.NextEvent()))

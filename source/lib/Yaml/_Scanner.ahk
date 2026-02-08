@@ -5,7 +5,7 @@
  * @description Tokenizes YAML character stream and manages indentation.
  * @author nullmake
  * @license Apache-2.0
- * 
+ *
  * Copyright 2026 nullmake
  */
 
@@ -195,7 +195,7 @@ class _YamlScanner {
             this._indentStack.Pop()
             this._pendingTokens.Push({Type: "Dedent", Value: "", Line: this._line, Column: 1})
         }
-        
+
         ; Optional: Validate that targetIndent matches a previous level (YAML 1.2.2 - 6.1)
         if (this._indentStack[this._indentStack.Length] != targetIndent) {
              throw YamlError("Indentation level mismatch", this._line, targetIndent + 1)
