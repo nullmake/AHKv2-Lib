@@ -153,6 +153,22 @@ class ScannerTest {
     }
 
     /**
+    * @method Test_ScanAnchorAndAlias
+    */
+    Test_ScanAnchorAndAlias() {
+        _input := "&anchor *alias"
+        _scanner := _YamlScanner(_input)
+
+        _t1 := _scanner.FetchToken()
+        Assert.Equal("Anchor", _t1.type)
+        Assert.Equal("anchor", _t1.value)
+
+        _t2 := _scanner.FetchToken()
+        Assert.Equal("Alias", _t2.type)
+        Assert.Equal("alias", _t2.value)
+    }
+
+    /**
     * @method Test_ScanMultipleDocuments
     */
     Test_ScanMultipleDocuments() {

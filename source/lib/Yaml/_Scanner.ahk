@@ -114,6 +114,19 @@ class _YamlScanner {
             return this._ScanBlockScalar(_char)
         }
 
+        ; Anchors and Aliases
+        if (_char == "&" || _char == "*") {
+            _type := (_char == "&") ? "Anchor" : "Alias"
+            this._Move(1)
+            if (RegExMatch(SubStr(this._source, this._pos), "^[a-zA-Z0-9_-]+", &_match)) {
+                _val := _match[0]
+                _token := {type: _type, value: _val, line: this._line, column: this._column - 1}
+                this._Move(StrLen(_val))
+                return _token
+            }
+            throw YamlError("Invalid " . _type . " name", this._line, this._column)
+        }
+
         ; Flow Indicators
         if (InStr("[]{},", _char)) {
             _type := (_char == "[") ? "FlowSequenceStart"
@@ -323,7 +336,7 @@ class _YamlScanner {
     _ScanBlockScalar(indicator) {
         _startLine := this._line
         _startCol := this._column
-        this._Move(1)
+        this._Move(1) ; Consume '|' or '>'
 
         ; Parse chopping indicator
         _chopping := "clip"
@@ -336,7 +349,7 @@ class _YamlScanner {
             this._Move(1)
         }
 
-        ; Skip trailing space and comments on the indicator line
+        ; Skip trailing space and comment on the indicator line
         this._SkipWhitespaceAndComments()
         if (this._pos <= this._length && SubStr(this._source, this._pos, 1) == "`n") {
             this._Move(1)
@@ -359,12 +372,11 @@ class _YamlScanner {
 
             _charAfterIndent := SubStr(this._source, _tempPos, 1)
 
-            ; Check for block end: non-empty line with less/equal indentation than parent
+            ; Check for block end
             if (_charAfterIndent != "`n" && _currentLineIndent <= this._indentStack[this._indentStack.Length]) {
                 break
             }
 
-            ; Set block indentation level from the first non-empty line
             if (_isFirstLine && _charAfterIndent != "`n") {
                 _blockIndent := _currentLineIndent
                 _isFirstLine := false
@@ -402,16 +414,14 @@ class _YamlScanner {
             this._column := 1
         }
 
-        ; Handle Chopping (YAML 1.2.2 - 8.1.1.2)
+        ; Handle Chopping
         if (_chopping == "strip") {
             _content := RTrim(_content, "`n")
         } else if (_chopping == "clip") {
-            ; Ensure exactly one trailing newline if content is not empty
             if (_content != "") {
                 _content := RTrim(_content, "`n") . "`n"
             }
         }
-        ; For 'keep', all newlines are already preserved in the loop.
 
         this._isAtLineStart := true
         return {type: "Scalar", value: _content, line: _startLine, column: _startCol}
