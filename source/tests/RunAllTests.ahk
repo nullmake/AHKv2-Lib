@@ -1,18 +1,18 @@
 #Requires AutoHotkey v2.0
-#Include ../lib/infrastructure/Logger.ahk
-#Include ../lib/infrastructure/ServiceLocator.ahk
-#Include ../lib/infrastructure/Assert.ahk
-#Include ../lib/infrastructure/Ime.ahk
-#Include ../lib/infrastructure/KeyEvent.ahk
-#Include ../lib/infrastructure/Window.ahk
-#Include ../lib/infrastructure/TestRunner.ahk
+#Include ../lib/Logger.ahk
+#Include ../lib/ServiceLocator.ahk
+#Include ../lib/Assert.ahk
+#Include ../lib/Ime.ahk
+#Include ../lib/KeyEvent.ahk
+#Include ../lib/Window.ahk
+#Include ../lib/TestRunner.ahk
 
-#Include infrastructure/AssertTest.ahk
-#Include infrastructure/ImeTest.ahk
-#Include infrastructure/KeyEventTest.ahk
-#Include infrastructure/LoggerTest.ahk
-#Include infrastructure/ServiceLocatorTest.ahk
-#Include infrastructure/WindowTest.ahk
+#Include AssertTest.ahk
+#Include ImeTest.ahk
+#Include KeyEventTest.ahk
+#Include LoggerTest.ahk
+#Include ServiceLocatorTest.ahk
+#Include WindowTest.ahk
 
 ; Set up environment
 ; Allow log directory to be specified via command line argument

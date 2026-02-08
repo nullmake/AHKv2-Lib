@@ -24,7 +24,10 @@ AHKv2-Lib/
 ├── documents/
 ├── source/
 │   ├── lib/
-│   │   └── infrastructure/
+│   │   ├── Yaml/
+│   │   ├── Assert.ahk
+│   │   ├── Ime.ahk
+│   │   └── ... (other utilities)
 │   └── tests/
 └── tools/
 ```
@@ -32,14 +35,9 @@ AHKv2-Lib/
 | Directory | Description |
 | :--- | :--- |
 | **documents/** | Technical specifications and design notes (Synced with GitHub Wiki). |
-| **source/lib/infrastructure/** | Shared utility components (e.g., Logger, Assert). |
-| **source/tests/** | Comprehensive unit tests following the library structure. |
+| **source/lib/** | Library files. Large modules are in folders, simple utilities are flat. |
+| **source/tests/** | Unit tests following the library structure. |
 | **tools/** | Helper scripts for development, build, and maintenance. |
-
-## Planned Modules
-
-1. **Yaml**: A robust YAML 1.2.2 parser and dumper.
-2. **Infrastructure**: Reusable components like Logger, Assert, and ServiceLocator.
 
 ## Development
 
