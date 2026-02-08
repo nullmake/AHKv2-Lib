@@ -13,6 +13,7 @@
 #Include LoggerTest.ahk
 #Include ServiceLocatorTest.ahk
 #Include WindowTest.ahk
+#Include Yaml/ScannerTest.ahk
 
 ; Set up environment
 ; Allow log directory to be specified via command line argument
@@ -36,6 +37,7 @@ _runner.Run(KeyEventTest())
 _runner.Run(LoggerTest())
 _runner.Run(ServiceLocatorTest())
 _runner.Run(WindowTest())
+_runner.Run(ScannerTest())
 
 ; Summary
 _runner.PrintFinalSummary()
