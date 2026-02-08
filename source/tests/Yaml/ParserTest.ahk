@@ -75,7 +75,106 @@ class ParserTest {
         ; End Outer
         Assert.Equal("YamlMappingEndEvent", Type(_parser.NextEvent())) ; End parent
         
-        Assert.Equal("YamlDocumentEndEvent", Type(_parser.NextEvent()))
-        Assert.Equal("YamlStreamEndEvent", Type(_parser.NextEvent()))
-    }
-}
+                Assert.Equal("YamlDocumentEndEvent", Type(_parser.NextEvent()))
+        
+                Assert.Equal("YamlStreamEndEvent", Type(_parser.NextEvent()))
+        
+            }
+        
+        
+        
+            /**
+        
+             * @method Test_ParseSimpleSequence
+        
+             */
+        
+            Test_ParseSimpleSequence() {
+        
+                _input := "- item1`n- item2"
+        
+                _scanner := _YamlScanner(_input)
+        
+                _parser := _YamlParser(_scanner)
+        
+                
+        
+                Assert.Equal("YamlStreamStartEvent", Type(_parser.NextEvent()))
+        
+                Assert.Equal("YamlDocumentStartEvent", Type(_parser.NextEvent()))
+        
+                
+        
+                Assert.Equal("YamlSequenceStartEvent", Type(_parser.NextEvent()))
+        
+                Assert.Equal("item1", _parser.NextEvent().value)
+        
+                Assert.Equal("item2", _parser.NextEvent().value)
+        
+                Assert.Equal("YamlSequenceEndEvent", Type(_parser.NextEvent()))
+        
+                
+        
+                Assert.Equal("YamlDocumentEndEvent", Type(_parser.NextEvent()))
+        
+                Assert.Equal("YamlStreamEndEvent", Type(_parser.NextEvent()))
+        
+            }
+        
+        
+        
+            /**
+        
+             * @method Test_ParseMappingWithSequence
+        
+             */
+        
+            Test_ParseMappingWithSequence() {
+        
+                _input := "list:`n  - a`n  - b"
+        
+                _scanner := _YamlScanner(_input)
+        
+                _parser := _YamlParser(_scanner)
+        
+                
+        
+                Assert.Equal("YamlStreamStartEvent", Type(_parser.NextEvent()))
+        
+                Assert.Equal("YamlDocumentStartEvent", Type(_parser.NextEvent()))
+        
+                
+        
+                ; Outer Mapping
+        
+                Assert.Equal("YamlMappingStartEvent", Type(_parser.NextEvent()))
+        
+                Assert.Equal("list", _parser.NextEvent().value)
+        
+                
+        
+                ; Inner Sequence
+        
+                Assert.Equal("YamlSequenceStartEvent", Type(_parser.NextEvent()))
+        
+                Assert.Equal("a", _parser.NextEvent().value)
+        
+                Assert.Equal("b", _parser.NextEvent().value)
+        
+                Assert.Equal("YamlSequenceEndEvent", Type(_parser.NextEvent()))
+        
+                
+        
+                Assert.Equal("YamlMappingEndEvent", Type(_parser.NextEvent()))
+        
+                
+        
+                Assert.Equal("YamlDocumentEndEvent", Type(_parser.NextEvent()))
+        
+                Assert.Equal("YamlStreamEndEvent", Type(_parser.NextEvent()))
+        
+            }
+        
+        }
+        
+        

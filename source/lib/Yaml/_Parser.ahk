@@ -134,15 +134,23 @@ class _YamlParser {
         
         ; Nested structure begins with an Indent token
         if (_token.Type == "Indent") {
-            this._FetchToken() ; Consume 'Indent'
-            return this.NextEvent() ; Recurse to find the actual node type
+            this._FetchToken()
+            return this.NextEvent()
+        }
+
+        ; Block Sequence
+        if (_token.Type == "SequenceIndicator") {
+            this._states.Pop()
+            this._states.Push("_StateBlockSequenceEnd")
+            this._states.Push("_StateBlockSequenceEntry")
+            return YamlSequenceStartEvent("", "", false, _token.Line, _token.Column)
         }
 
         if (_token.Type == "Scalar") {
             _next := this._PeekToken(2)
             
             if (_next.Type == "MappingIndicator") {
-                ; Transition to Mapping: Send MappingStart and then process keys
+                ; Transition to Mapping
                 this._states.Pop()
                 this._states.Push("_StateBlockMappingEnd")
                 this._states.Push("_StateBlockMappingKey")
@@ -155,52 +163,95 @@ class _YamlParser {
             return YamlScalarEvent(_token.Value, "", "", 0, _token.Line, _token.Column)
         }
         
-        ; Handle empty values or end of structures
+        ; Handle empty values
         if (_token.Type == "Dedent" || _token.Type == "StreamEnd" || _token.Type == "DocumentStart") {
             this._states.Pop()
             return YamlScalarEvent("", "", "", 0, _token.Line, _token.Column)
         }
         
-        throw YamlError("Expected scalar or indent, but found " . _token.Type, _token.Line, _token.Column)
+        throw YamlError("Expected scalar, sequence, or indent, but found " . _token.Type, _token.Line, _token.Column)
+    }
+
+    /**
+     * @method _StateBlockSequenceEntry
+     * Handles a single '-' entry in a block sequence.
+     */
+    _StateBlockSequenceEntry() {
+        _token := this._FetchToken() ; Consumes '-'
+        
+        ; After '-', we parse the node (which could be nested)
+        this._states.Pop()
+        this._states.Push("_StateBlockSequenceNext")
+        this._states.Push("_StateBlockNode")
+        
+        return this.NextEvent()
+    }
+
+    /**
+     * @method _StateBlockSequenceNext
+     * Checks if there's another '-' or if the sequence ends.
+     */
+    _StateBlockSequenceNext() {
+        _token := this._PeekToken()
+        
+        if (_token.Type == "SequenceIndicator") {
+            this._states.Pop()
+            this._states.Push("_StateBlockSequenceEntry")
+            return this.NextEvent()
+        }
+        
+        ; End of sequence
+        if (_token.Type == "Dedent" || _token.Type == "StreamEnd" || _token.Type == "DocumentStart") {
+            if (_token.Type == "Dedent") {
+                this._FetchToken()
+            }
+            this._states.Pop()
+            return this.NextEvent() ; Proceed to BlockSequenceEnd
+        }
+        
+        throw YamlError("Expected sequence entry or dedent, but found " . _token.Type, _token.Line, _token.Column)
+    }
+
+    /**
+     * @method _StateBlockSequenceEnd
+     */
+    _StateBlockSequenceEnd() {
+        this._states.Pop()
+        return YamlSequenceEndEvent()
     }
 
     /**
      * @method _StateBlockMappingKey
-     * Decides whether to continue the mapping or end it based on the next token.
+     * Decides whether to continue the mapping or end it.
      */
     _StateBlockMappingKey() {
         _token := this._PeekToken()
         
-        ; Mapping ends on Dedent or new document/stream
         if (_token.Type == "Dedent" || _token.Type == "StreamEnd" || _token.Type == "DocumentStart") {
             if (_token.Type == "Dedent") {
-                this._FetchToken() ; Consume the 'Dedent' that closed this mapping
+                this._FetchToken()
             }
             this._states.Pop()
             return this.NextEvent() ; Proceed to BlockMappingEnd
         }
         
-        ; If there's another scalar, it's a new key
         if (_token.Type == "Scalar") {
             this._states.Pop()
             this._states.Push("_StateBlockMappingValue")
             return this.NextEvent()
         }
 
-        ; Skip other virtual tokens
         this._FetchToken()
         return this._StateBlockMappingKey()
     }
 
     /**
      * @method _StateBlockMappingValue
-     * Processes a single key-value pair in a block mapping.
      */
     _StateBlockMappingValue() {
-        _keyToken := this._FetchToken() ; Consumes Key Scalar
+        _keyToken := this._FetchToken() ; Consumes Key
         _indicator := this._FetchToken() ; Consumes ':'
         
-        ; Transition: After returning the key, parse the value
         this._states.Pop()
         this._states.Push("_StateBlockMappingKey") 
         this._states.Push("_StateBlockNode") 
@@ -210,7 +261,6 @@ class _YamlParser {
 
     /**
      * @method _StateBlockMappingEnd
-     * Emits MappingEnd event.
      */
     _StateBlockMappingEnd() {
         this._states.Pop()
