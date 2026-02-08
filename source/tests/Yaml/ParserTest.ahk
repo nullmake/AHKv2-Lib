@@ -202,4 +202,31 @@ class ParserTest {
         ; Folded converts single newlines into spaces.
         Assert.Equal("line1 line2`n", _scalar.value)
     }
+
+    /**
+    * @method Test_ParseAnchorAndAlias
+    * Verifies that anchors and aliases are correctly emitted as events.
+    */
+    Test_ParseAnchorAndAlias() {
+        _input := "- &id001 value`n- *id001"
+        _scanner := _YamlScanner(_input)
+        _parser := _YamlParser(_scanner)
+
+        _parser.NextEvent() ; StreamStart
+        _parser.NextEvent() ; DocumentStart
+        _parser.NextEvent() ; SequenceStart
+
+        ; First item with anchor
+        _scalar := _parser.NextEvent()
+        Assert.Equal("YamlScalarEvent", Type(_scalar))
+        Assert.Equal("value", _scalar.value)
+        Assert.Equal("id001", _scalar.anchor)
+
+        ; Second item as alias
+        _alias := _parser.NextEvent()
+        Assert.Equal("YamlAliasEvent", Type(_alias))
+        Assert.Equal("id001", _alias.anchor)
+
+        Assert.Equal("YamlSequenceEndEvent", Type(_parser.NextEvent()))
+    }
 }

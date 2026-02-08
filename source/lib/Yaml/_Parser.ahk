@@ -30,6 +30,11 @@ class _YamlParser {
     _tokens := []
 
     /**
+    * @field {String} _pendingAnchor - Temporary storage for an anchor name.
+    */
+    _pendingAnchor := ""
+
+    /**
     * @constructor
     * @param {Object} scanner - An instance of _YamlScanner.
     */
@@ -133,6 +138,19 @@ class _YamlParser {
     _StateBlockNode() {
         _token := this._PeekToken()
 
+        ; Property: Anchor (&anchor)
+        if (_token.type == "Anchor") {
+            this._pendingAnchor := this._FetchToken().value
+            return this.NextEvent() ; Continue to actual node
+        }
+
+        ; Property: Alias (*alias)
+        if (_token.type == "Alias") {
+            _aliasToken := this._FetchToken()
+            this._states.Pop()
+            return YamlAliasEvent(_aliasToken.value, _aliasToken.line, _aliasToken.column)
+        }
+
         ; Nested structure begins with an Indent token
         if (_token.type == "Indent") {
             this._FetchToken()
@@ -141,49 +159,61 @@ class _YamlParser {
 
         ; Block Sequence
         if (_token.type == "SequenceIndicator") {
+            _anchor := this._pendingAnchor
+            this._pendingAnchor := ""
             this._states.Pop()
             this._states.Push("_StateBlockSequenceEnd")
             this._states.Push("_StateBlockSequenceEntry")
-            return YamlSequenceStartEvent("", "", false, _token.line, _token.column)
+            return YamlSequenceStartEvent("", _anchor, false, _token.line, _token.column)
         }
 
         ; Flow Sequence
         if (_token.type == "FlowSequenceStart") {
+            _anchor := this._pendingAnchor
+            this._pendingAnchor := ""
             this._FetchToken()
             this._states.Pop()
             this._states.Push("_StateFlowSequenceNext")
-            return YamlSequenceStartEvent("", "", true, _token.line, _token.column)
+            return YamlSequenceStartEvent("", _anchor, true, _token.line, _token.column)
         }
 
         ; Flow Mapping
         if (_token.type == "FlowMappingStart") {
+            _anchor := this._pendingAnchor
+            this._pendingAnchor := ""
             this._FetchToken()
             this._states.Pop()
             this._states.Push("_StateFlowMappingKey")
-            return YamlMappingStartEvent("", "", true, _token.line, _token.column)
+            return YamlMappingStartEvent("", _anchor, true, _token.line, _token.column)
         }
 
         if (_token.type == "Scalar") {
             _next := this._PeekToken(2)
 
             if (_next.type == "MappingIndicator") {
-                ; Transition to Mapping: Send MappingStart and then process keys
+                ; Transition to Mapping
+                _anchor := this._pendingAnchor
+                this._pendingAnchor := ""
                 this._states.Pop()
                 this._states.Push("_StateBlockMappingEnd")
                 this._states.Push("_StateBlockMappingKey")
-                return YamlMappingStartEvent("", "", false, _token.line, _token.column)
+                return YamlMappingStartEvent("", _anchor, false, _token.line, _token.column)
             }
 
             ; Simple scalar node
+            _anchor := this._pendingAnchor
+            this._pendingAnchor := ""
             this._FetchToken()
             this._states.Pop()
-            return YamlScalarEvent(_token.value, "", "", 0, _token.line, _token.column)
+            return YamlScalarEvent(_token.value, "", _anchor, 0, _token.line, _token.column)
         }
 
         ; Handle empty values or end of structures
         if (_token.type == "Dedent" || _token.type == "StreamEnd" || _token.type == "DocumentStart") {
+            _anchor := this._pendingAnchor
+            this._pendingAnchor := ""
             this._states.Pop()
-            return YamlScalarEvent("", "", "", 0, _token.line, _token.column)
+            return YamlScalarEvent("", "", _anchor, 0, _token.line, _token.column)
         }
 
         throw YamlError("Expected scalar, collection, or indent, but found " . _token.type, _token.line, _token.column)
@@ -216,7 +246,6 @@ class _YamlParser {
             return this.NextEvent()
         }
 
-        ; End of sequence
         if (_token.type == "Dedent" || _token.type == "StreamEnd" || _token.type == "DocumentStart") {
             if (_token.type == "Dedent") {
                 this._FetchToken()
@@ -239,7 +268,7 @@ class _YamlParser {
 
     /**
     * @method _StateBlockMappingKey
-    * Decides whether to continue the mapping or end it.
+    * Decides whether to continue the mapping or end it based on the next token.
     */
     _StateBlockMappingKey() {
         _token := this._PeekToken()

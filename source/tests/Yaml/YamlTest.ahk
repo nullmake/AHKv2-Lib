@@ -50,4 +50,15 @@ class YamlTest {
         Assert.Equal("ahk", _obj["tags"][1])
         Assert.Equal("yaml", _obj["tags"][2])
     }
+
+    /**
+    * @method Test_LoadAnchorAndAlias
+    */
+    Test_LoadAnchorAndAlias() {
+        _input := "a: &id value`nb: *id"
+        _obj := Yaml.Load(_input)
+
+        Assert.Equal("value", _obj["a"])
+        Assert.Equal("value", _obj["b"])
+    }
 }

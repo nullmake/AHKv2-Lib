@@ -20,6 +20,11 @@ class _YamlComposer {
     _parser := ""
 
     /**
+    * @field {Map} _anchors - Registry of nodes by anchor name.
+    */
+    _anchors := Map()
+
+    /**
     * @constructor
     * @param {Object} parser - An instance of _YamlParser.
     */
@@ -61,104 +66,52 @@ class _YamlComposer {
     */
     _ComposeNode() {
         _event := this._parser.NextEvent()
-
-        if (_event is YamlScalarEvent) {
-            return YamlScalarNode(_event.value, _event.tag, _event.anchor, _event.style)
-        }
-
-        if (_event is YamlMappingStartEvent) {
-            _node := YamlMappingNode(_event.tag, _event.anchor)
-            loop {
-                ; Peek is not available for events yet, so we fetch and check
-                _nextEvent := this._parser.NextEvent()
-                if (_nextEvent is YamlMappingEndEvent) {
-                    break
-                }
-
-                ; Mapping events: Key (Scalar) then Value (Recursive)
-                _keyNode := YamlScalarNode(_nextEvent.value, _nextEvent.tag, _nextEvent.anchor, _nextEvent.style)
-                _valueNode := this._ComposeNode()
-                _node.Add(_keyNode, _valueNode)
-            }
-            return _node
-        }
-
-        if (_event is YamlSequenceStartEvent) {
-            _node := YamlSequenceNode(_event.tag, _event.anchor)
-            loop {
-                _nextEvent := this._parser.NextEvent()
-                if (_nextEvent is YamlSequenceEndEvent) {
-                    break
-                }
-
-                ; For sequences, each event starts a new node
-                _itemNode := this._ComposeNodeFromEvent(_nextEvent)
-                _node.children.Push(_itemNode)
-            }
-            return _node
-        }
-
-        return ""
+        return this._ComposeNodeFromEvent(_event)
     }
 
     /**
     * @method _ComposeNodeFromEvent
-    * Handles starting a node construction when the first event is already fetched.
+    * Builds a node starting from a pre-fetched event.
     */
     _ComposeNodeFromEvent(_event) {
+        if (_event is YamlAliasEvent) {
+            if (!this._anchors.Has(_event.anchor)) {
+                throw YamlError("Unresolved alias: " . _event.anchor, _event.line, _event.column)
+            }
+            return this._anchors[_event.anchor]
+        }
+
+        _node := ""
         if (_event is YamlScalarEvent) {
-            return YamlScalarNode(_event.value, _event.tag, _event.anchor, _event.style)
-        }
-
-        if (_event is YamlMappingStartEvent || _event is YamlSequenceStartEvent) {
-            ; If it's a collection start, we need to push it back or handle recursion.
-            ; For simplicity, we re-inject the state or call _ComposeNode with a modified parser.
-            ; But since our events are already hierarchical in the stream, we can just call _ComposeNode
-            ; if we had a way to "unread" the event.
-            ; Instead, let's make _ComposeNode accept an optional initial event.
-            return this._ComposeNodeExtended(_event)
-        }
-        return ""
-    }
-
-    /**
-    * @method _ComposeNodeExtended
-    * Extended version of _ComposeNode that can start from a pre-fetched event.
-    */
-    _ComposeNodeExtended(_initialEvent) {
-        _event := _initialEvent
-
-        if (_event is YamlScalarEvent) {
-            return YamlScalarNode(_event.value, _event.tag, _event.anchor, _event.style)
-        }
-
-        if (_event is YamlMappingStartEvent) {
+            _node := YamlScalarNode(_event.value, _event.tag, _event.anchor, _event.style)
+        } else if (_event is YamlMappingStartEvent) {
             _node := YamlMappingNode(_event.tag, _event.anchor)
             loop {
                 _nextEvent := this._parser.NextEvent()
                 if (_nextEvent is YamlMappingEndEvent) {
                     break
                 }
-                _keyNode := YamlScalarNode(_nextEvent.value, _nextEvent.tag, _nextEvent.anchor, _nextEvent.style)
+                _keyNode := this._ComposeNodeFromEvent(_nextEvent)
                 _valueNode := this._ComposeNode()
                 _node.Add(_keyNode, _valueNode)
             }
-            return _node
-        }
-
-        if (_event is YamlSequenceStartEvent) {
+        } else if (_event is YamlSequenceStartEvent) {
             _node := YamlSequenceNode(_event.tag, _event.anchor)
             loop {
                 _nextEvent := this._parser.NextEvent()
                 if (_nextEvent is YamlSequenceEndEvent) {
                     break
                 }
-                _itemNode := this._ComposeNodeExtended(_nextEvent)
+                _itemNode := this._ComposeNodeFromEvent(_nextEvent)
                 _node.children.Push(_itemNode)
             }
-            return _node
         }
 
-        return ""
+        ; Register anchor if present
+        if (_node != "" && _event.HasProp("anchor") && _event.anchor != "") {
+            this._anchors[_event.anchor] := _node
+        }
+
+        return _node
     }
 }
