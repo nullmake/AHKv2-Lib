@@ -80,8 +80,8 @@ class _YamlScanner {
             }
         }
 
-        ; Skip leading horizontal whitespace (spaces)
-        this._SkipWhitespace()
+        ; Skip leading horizontal whitespace and comments
+        this._SkipWhitespaceAndComments()
 
         ; Handle end of stream
         if (this._pos > this._length) {
@@ -104,6 +104,11 @@ class _YamlScanner {
             return this.FetchToken()
         }
 
+        ; Quoted Scalars
+        if (_char == '"' || _char == "'") {
+            return this._ScanQuotedScalar(_char)
+        }
+
         ; Sequence Indicator '-'
         if (_char == "-" && this._IsFollowedByWhitespace(this._pos + 1)) {
             _token := {type: "SequenceIndicator", value: "-", line: this._line, column: this._column}
@@ -112,7 +117,8 @@ class _YamlScanner {
         }
 
         ; Mapping Indicator Lookahead
-        if (RegExMatch(SubStr(this._source, this._pos), "^(?<_scalar>[^:#\s\n]+)(?<_indicator>:\s|:$|:\n)", &_match)) {
+        ; Captures scalar characters, allowing '#' if NOT preceded by whitespace.
+        if (RegExMatch(SubStr(this._source, this._pos), "^(?<_scalar>(?:[^:#\s\n]|(?<!\s)#)+)(?<_indicator>:\s|:$|:\n)", &_match)) {
             _token := {type: "Scalar", value: _match._scalar, line: this._line, column: this._column}
             this._Move(StrLen(_match._scalar))
             return _token
@@ -126,7 +132,8 @@ class _YamlScanner {
         }
 
         ; Default Plain Scalar
-        if (RegExMatch(SubStr(this._source, this._pos), "^[^:\s#\n]+", &_match)) {
+        ; Stops at ':' followed by space, or a '#' preceded by space.
+        if (RegExMatch(SubStr(this._source, this._pos), "^(?:[^:#\s\n]|(?<!\s)#)+", &_match)) {
             _val := _match[0]
             _token := {type: "Scalar", value: _val, line: this._line, column: this._column}
             this._Move(StrLen(_val))
@@ -142,7 +149,6 @@ class _YamlScanner {
 
     /**
      * @method _HandleLineStart
-     * Manages indentation levels and document boundaries at the start of a line.
      */
     _HandleLineStart() {
         this._isAtLineStart := false
@@ -169,8 +175,12 @@ class _YamlScanner {
             return
         }
 
-        ; Skip empty lines
-        if (this._pos <= this._length && SubStr(this._source, this._pos, 1) == "`n") {
+        ; Skip empty lines or full-line comments
+        _nextChar := SubStr(this._source, this._pos, 1)
+        if (this._pos <= this._length && (_nextChar == "`n" || _nextChar == "#")) {
+            if (_nextChar == "#") {
+                this._SkipComment()
+            }
             this._isAtLineStart := true
             return
         }
@@ -187,8 +197,6 @@ class _YamlScanner {
 
     /**
      * @method _UnrollIndents
-     * Generates Dedent tokens until the current indentation level is matched.
-     * @param {Integer} targetIndent - The indentation level to match.
      */
     _UnrollIndents(targetIndent) {
         while (this._indentStack.Length > 1 && this._indentStack[this._indentStack.Length] > targetIndent) {
@@ -196,15 +204,28 @@ class _YamlScanner {
             this._pendingTokens.Push({type: "Dedent", value: "", line: this._line, column: 1})
         }
         
-        ; Optional: Validate that targetIndent matches a previous level (YAML 1.2.2 - 6.1)
         if (this._indentStack[this._indentStack.Length] != targetIndent) {
              throw YamlError("Indentation level mismatch", this._line, targetIndent + 1)
         }
     }
 
     /**
+     * @method _SkipWhitespaceAndComments
+     */
+    _SkipWhitespaceAndComments() {
+        loop {
+            this._SkipWhitespace()
+            ; '#' is a comment only if at line start (column 1) or preceded by space.
+            if (SubStr(this._source, this._pos, 1) == "#") {
+                this._SkipComment()
+            } else {
+                break
+            }
+        }
+    }
+
+    /**
      * @method _SkipWhitespace
-     * Consumes horizontal spaces at the current position.
      */
     _SkipWhitespace() {
         while (this._pos <= this._length) {
@@ -218,10 +239,48 @@ class _YamlScanner {
     }
 
     /**
+     * @method _SkipComment
+     * Consumes characters from '#' until the next line break.
+     */
+    _SkipComment() {
+        while (this._pos <= this._length && SubStr(this._source, this._pos, 1) != "`n") {
+            this._Move(1)
+        }
+    }
+
+    /**
+     * @method _ScanQuotedScalar
+     * Reads a string enclosed in double or single quotes.
+     * @param {String} quote - The opening quote character.
+     */
+    _ScanQuotedScalar(quote) {
+        _startLine := this._line
+        _startCol := this._column
+        this._Move(1) ; Consume opening quote
+        
+        _val := ""
+        while (this._pos <= this._length) {
+            _char := SubStr(this._source, this._pos, 1)
+            
+            if (_char == quote) {
+                this._Move(1) ; Consume closing quote
+                return {type: "Scalar", value: _val, line: _startLine, column: _startCol}
+            }
+            
+            if (_char == "`n") {
+                this._line++
+                this._column := 1
+            }
+            
+            _val .= _char
+            this._Move(1)
+        }
+        
+        throw YamlError("Unclosed quoted scalar", _startLine, _startCol)
+    }
+
+    /**
      * @method _IsFollowedByWhitespace
-     * Checks if the character at the given position is whitespace or end of stream.
-     * @param {Integer} pos - Position to check.
-     * @returns {Boolean}
      */
     _IsFollowedByWhitespace(pos) {
         if (pos > this._length) {
@@ -233,8 +292,6 @@ class _YamlScanner {
 
     /**
      * @method _Move
-     * Updates the position and column counters.
-     * @param {Integer} count - Number of characters moved.
      */
     _Move(count) {
         this._pos += count
