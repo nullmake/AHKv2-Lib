@@ -117,7 +117,6 @@ class _YamlScanner {
         }
 
         ; Mapping Indicator Lookahead
-        ; Captures scalar characters, allowing '#' if NOT preceded by whitespace.
         if (RegExMatch(SubStr(this._source, this._pos), "^(?<_scalar>(?:[^:#\s\n]|(?<!\s)#)+)(?<_indicator>:\s|:$|:\n)", &_match)) {
             _token := {type: "Scalar", value: _match._scalar, line: this._line, column: this._column}
             this._Move(StrLen(_match._scalar))
@@ -132,7 +131,6 @@ class _YamlScanner {
         }
 
         ; Default Plain Scalar
-        ; Stops at ':' followed by space, or a '#' preceded by space.
         if (RegExMatch(SubStr(this._source, this._pos), "^(?:[^:#\s\n]|(?<!\s)#)+", &_match)) {
             _val := _match[0]
             _token := {type: "Scalar", value: _val, line: this._line, column: this._column}
@@ -215,7 +213,6 @@ class _YamlScanner {
     _SkipWhitespaceAndComments() {
         loop {
             this._SkipWhitespace()
-            ; '#' is a comment only if at line start (column 1) or preceded by space.
             if (SubStr(this._source, this._pos, 1) == "#") {
                 this._SkipComment()
             } else {
@@ -240,7 +237,6 @@ class _YamlScanner {
 
     /**
     * @method _SkipComment
-    * Consumes characters from '#' until the next line break.
     */
     _SkipComment() {
         while (this._pos <= this._length && SubStr(this._source, this._pos, 1) != "`n") {
@@ -250,10 +246,17 @@ class _YamlScanner {
 
     /**
     * @method _ScanQuotedScalar
-    * Reads a string enclosed in double or single quotes.
+    * Reads a string enclosed in double or single quotes with escape sequence support.
     * @param {String} quote - The opening quote character.
     */
     _ScanQuotedScalar(quote) {
+        static _escapes := Map(
+            "0", "`0", "a", "`a", "b", "`b", "t", "`t", "n", "`n",
+            "v", "`v", "f", "`f", "r", "`r", "e", "`e",
+            " ", " ", '"', '"', "/", "/", "\", "\",
+            "N", "`n", "L", "`n", "P", " "
+        )
+
         _startLine := this._line
         _startCol := this._column
         this._Move(1) ; Consume opening quote
@@ -265,6 +268,27 @@ class _YamlScanner {
             if (_char == quote) {
                 this._Move(1) ; Consume closing quote
                 return {type: "Scalar", value: _val, line: _startLine, column: _startCol}
+            }
+
+            if (_char == "\") {
+                if (quote == "'") {
+                    ; Single quotes only support '' for escaping ' (YAML 1.2.2 - 7.3.2)
+                    ; but our loop doesn't handle that yet.
+                    _val .= "\"
+                } else {
+                    ; Double quotes support many escape sequences (YAML 1.2.2 - 5.7)
+                    this._Move(1)
+                    _nextChar := SubStr(this._source, this._pos, 1)
+                    if (_escapes.Has(_nextChar)) {
+                        _val .= _escapes[_nextChar]
+                    } else if (_nextChar == "`n") {
+                        ; Escaped line break (folding)
+                    } else {
+                        throw YamlError("Invalid escape sequence: \" . _nextChar, this._line, this._column)
+                    }
+                    this._Move(1)
+                    continue
+                }
             }
 
             if (_char == "`n") {

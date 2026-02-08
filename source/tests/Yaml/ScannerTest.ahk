@@ -121,6 +121,19 @@ class ScannerTest {
     }
 
     /**
+    * @method Test_ScanEscapedDoubleQuotes
+    */
+    Test_ScanEscapedDoubleQuotes() {
+        _input := '"line1\nline2\ttab\"quote"'
+        _scanner := _YamlScanner(_input)
+
+        _t := _scanner.FetchToken()
+        ; Use single quotes to safely contain a double quote character in AHK v2
+        _expected := 'line1`nline2`ttab"quote'
+        Assert.Equal(_expected, _t.value)
+    }
+
+    /**
     * @method Test_ScanMultipleDocuments
     */
     Test_ScanMultipleDocuments() {
