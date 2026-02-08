@@ -102,6 +102,7 @@ class _YamlParser {
             return YamlStreamEndEvent()
         }
 
+        ; Explicit Document Start '---'
         _explicit := false
         if (_token.type == "DocumentStart") {
             this._FetchToken()
@@ -146,6 +147,22 @@ class _YamlParser {
             return YamlSequenceStartEvent("", "", false, _token.line, _token.column)
         }
 
+        ; Flow Sequence
+        if (_token.type == "FlowSequenceStart") {
+            this._FetchToken()
+            this._states.Pop()
+            this._states.Push("_StateFlowSequenceNext")
+            return YamlSequenceStartEvent("", "", true, _token.line, _token.column)
+        }
+
+        ; Flow Mapping
+        if (_token.type == "FlowMappingStart") {
+            this._FetchToken()
+            this._states.Pop()
+            this._states.Push("_StateFlowMappingKey")
+            return YamlMappingStartEvent("", "", true, _token.line, _token.column)
+        }
+
         if (_token.type == "Scalar") {
             _next := this._PeekToken(2)
 
@@ -163,12 +180,13 @@ class _YamlParser {
             return YamlScalarEvent(_token.value, "", "", 0, _token.line, _token.column)
         }
 
+        ; Handle empty values or end of structures
         if (_token.type == "Dedent" || _token.type == "StreamEnd" || _token.type == "DocumentStart") {
             this._states.Pop()
             return YamlScalarEvent("", "", "", 0, _token.line, _token.column)
         }
 
-        throw YamlError("Expected scalar, sequence, or indent, but found " . _token.type, _token.line, _token.column)
+        throw YamlError("Expected scalar, collection, or indent, but found " . _token.type, _token.line, _token.column)
     }
 
     /**
@@ -198,12 +216,13 @@ class _YamlParser {
             return this.NextEvent()
         }
 
+        ; End of sequence
         if (_token.type == "Dedent" || _token.type == "StreamEnd" || _token.type == "DocumentStart") {
             if (_token.type == "Dedent") {
                 this._FetchToken()
             }
             this._states.Pop()
-            return this.NextEvent()
+            return this.NextEvent() ; Proceed to BlockSequenceEnd
         }
 
         throw YamlError("Expected sequence entry or dedent, but found " . _token.type, _token.line, _token.column)
@@ -211,6 +230,7 @@ class _YamlParser {
 
     /**
     * @method _StateBlockSequenceEnd
+    * Emits SequenceEnd event.
     */
     _StateBlockSequenceEnd() {
         this._states.Pop()
@@ -244,6 +264,7 @@ class _YamlParser {
 
     /**
     * @method _StateBlockMappingValue
+    * Processes a single key-value pair in a block mapping.
     */
     _StateBlockMappingValue() {
         _keyToken := this._FetchToken() ; Consumes Key
@@ -258,9 +279,84 @@ class _YamlParser {
 
     /**
     * @method _StateBlockMappingEnd
+    * Emits MappingEnd event.
     */
     _StateBlockMappingEnd() {
         this._states.Pop()
         return YamlMappingEndEvent()
+    }
+
+    ; --- Flow Style States ---
+
+    /**
+    * @method _StateFlowSequenceNext
+    * Handles items and separators within [ ].
+    */
+    _StateFlowSequenceNext() {
+        _token := this._PeekToken()
+
+        if (_token.type == "FlowSequenceEnd") {
+            this._FetchToken()
+            this._states.Pop()
+            return YamlSequenceEndEvent(_token.line, _token.column)
+        }
+
+        if (_token.type == "FlowEntrySeparator") {
+            this._FetchToken()
+            return this._StateFlowSequenceNext()
+        }
+
+        ; Transition to parse an item
+        this._states.Push("_StateFlowSequenceNext")
+        this._states.Push("_StateBlockNode")
+        this._states.RemoveAt(this._states.Length - 2) ; Replace current
+        return this.NextEvent()
+    }
+
+    /**
+    * @method _StateFlowMappingKey
+    * Handles keys and separators within { }.
+    */
+    _StateFlowMappingKey() {
+        _token := this._PeekToken()
+
+        if (_token.type == "FlowMappingEnd") {
+            this._FetchToken()
+            this._states.Pop()
+            return YamlMappingEndEvent(_token.line, _token.column)
+        }
+
+        if (_token.type == "FlowEntrySeparator") {
+            this._FetchToken()
+            return this._StateFlowMappingKey()
+        }
+
+        ; Expect a key
+        this._states.Pop()
+        this._states.Push("_StateFlowMappingValue")
+        return this.NextEvent()
+    }
+
+    /**
+    * @method _StateFlowMappingValue
+    * Handles key:value pair within { }.
+    */
+    _StateFlowMappingValue() {
+        _token := this._PeekToken()
+
+        if (_token.type == "Scalar") {
+            _keyToken := this._FetchToken()
+            _next := this._PeekToken()
+
+            if (_next.type == "MappingIndicator") {
+                this._FetchToken() ; Consumes ':'
+                this._states.Pop()
+                this._states.Push("_StateFlowMappingKey")
+                this._states.Push("_StateBlockNode")
+                return YamlScalarEvent(_keyToken.value, "", "", 0, _keyToken.line, _keyToken.column)
+            }
+        }
+
+        throw YamlError("Expected mapping key in flow style", _token.line, _token.column)
     }
 }

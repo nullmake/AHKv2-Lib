@@ -109,6 +109,19 @@ class _YamlScanner {
             return this._ScanQuotedScalar(_char)
         }
 
+        ; Flow Indicators
+        if (InStr("[]{},", _char)) {
+            _type := (_char == "[") ? "FlowSequenceStart"
+                    : (_char == "]") ? "FlowSequenceEnd"
+                    : (_char == "{") ? "FlowMappingStart"
+                    : (_char == "}") ? "FlowMappingEnd"
+                    : "FlowEntrySeparator" ; ","
+
+            _token := {type: _type, value: _char, line: this._line, column: this._column}
+            this._Move(1)
+            return _token
+        }
+
         ; Sequence Indicator '-'
         if (_char == "-" && this._IsFollowedByWhitespace(this._pos + 1)) {
             _token := {type: "SequenceIndicator", value: "-", line: this._line, column: this._column}
@@ -117,21 +130,22 @@ class _YamlScanner {
         }
 
         ; Mapping Indicator Lookahead
-        if (RegExMatch(SubStr(this._source, this._pos), "^(?<_scalar>(?:[^:#\s\n]|(?<!\s)#)+)(?<_indicator>:\s|:$|:\n)", &_match)) {
+        if (RegExMatch(SubStr(this._source, this._pos), "^(?<_scalar>(?:[^:#\s\n\[\]{},]|(?<!\s)#)+)(?<_indicator>:\s|:$|:\n|:[\]},])", &_match)) {
             _token := {type: "Scalar", value: _match._scalar, line: this._line, column: this._column}
             this._Move(StrLen(_match._scalar))
             return _token
         }
 
         ; Mapping Indicator ':'
-        if (_char == ":" && this._IsFollowedByWhitespace(this._pos + 1)) {
+        if (_char == ":" && (this._IsFollowedByWhitespace(this._pos + 1) || InStr("]}", SubStr(this._source, this._pos + 1, 1)))) {
             _token := {type: "MappingIndicator", value: ":", line: this._line, column: this._column}
             this._Move(1)
             return _token
         }
 
         ; Default Plain Scalar
-        if (RegExMatch(SubStr(this._source, this._pos), "^(?:[^:#\s\n]|(?<!\s)#)+", &_match)) {
+        ; Stops at indicators, whitespace, or flow symbols.
+        if (RegExMatch(SubStr(this._source, this._pos), "^(?:[^:#\s\n\[\]{},]|(?<!\s)#)+", &_match)) {
             _val := _match[0]
             _token := {type: "Scalar", value: _val, line: this._line, column: this._column}
             this._Move(StrLen(_val))
@@ -246,8 +260,6 @@ class _YamlScanner {
 
     /**
     * @method _ScanQuotedScalar
-    * Reads a string enclosed in double or single quotes with escape sequence support.
-    * @param {String} quote - The opening quote character.
     */
     _ScanQuotedScalar(quote) {
         static _escapes := Map(
@@ -272,17 +284,14 @@ class _YamlScanner {
 
             if (_char == "\") {
                 if (quote == "'") {
-                    ; Single quotes only support '' for escaping ' (YAML 1.2.2 - 7.3.2)
-                    ; but our loop doesn't handle that yet.
                     _val .= "\"
                 } else {
-                    ; Double quotes support many escape sequences (YAML 1.2.2 - 5.7)
                     this._Move(1)
                     _nextChar := SubStr(this._source, this._pos, 1)
                     if (_escapes.Has(_nextChar)) {
                         _val .= _escapes[_nextChar]
                     } else if (_nextChar == "`n") {
-                        ; Escaped line break (folding)
+                        ; Escaped line break
                     } else {
                         throw YamlError("Invalid escape sequence: \" . _nextChar, this._line, this._column)
                     }
