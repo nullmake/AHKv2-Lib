@@ -49,26 +49,45 @@ class _YamlConstructor {
     /**
     * @method _ConstructScalar
     * Converts a scalar node to its native type based on JSON Schema.
+    * Only plain scalars (Style 0) are subject to type casting.
     */
     _ConstructScalar(node) {
         _val := node.value
 
-        ; TODO: Implement full JSON Schema (YAML 1.2.2) type casting.
-        ; For now, keep as string or simple numbers.
-        if (IsNumber(_val)) {
-            return _val + 0 ; Convert to numeric
+        ; 1. Quoted scalars are always strings (YAML 1.2.2 - JSON Schema)
+        if (node.style != 0) {
+            return _val
         }
 
-        if (_val == "true") {
+        ; 2. Null values (case-insensitive)
+        if (_val == "" || _val ~= "i)^null$" || _val == "~") {
+            return ""
+        }
+
+        ; 3. Boolean values (case-insensitive)
+        if (_val ~= "i)^true$") {
             return true
         }
-
-        if (_val == "false") {
+        if (_val ~= "i)^false$") {
             return false
         }
 
-        if (node.value == "" && node.style == 0) {
-            return "" ; Null
+        ; 4. Numbers (Integer and Float)
+        if (IsNumber(_val)) {
+            ; Hexadecimal check
+            if (_val ~= "i)^0x[0-9a-f]+$") {
+                return Integer(_val)
+            }
+            ; Return native numeric type (Integer or Float)
+            return _val + 0
+        }
+
+        ; 5. Special floats
+        if (_val ~= "i)^\.inf$") {
+            return 9.223372036854775807e18
+        }
+        if (_val ~= "i)^\.nan$") {
+            return "NaN"
         }
 
         return _val

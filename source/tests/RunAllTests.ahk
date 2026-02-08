@@ -25,6 +25,7 @@
 #Include WindowTest.ahk
 #Include Yaml/ScannerTest.ahk
 #Include Yaml/ParserTest.ahk
+#Include Yaml/ConstructorTest.ahk
 #Include Yaml/YamlTest.ahk
 
 ; --- Setup Environment ---
@@ -46,6 +47,7 @@ _runner.Run(ServiceLocatorTest())
 _runner.Run(WindowTest())
 _runner.Run(ScannerTest())
 _runner.Run(ParserTest())
+_runner.Run(ConstructorTest())
 _runner.Run(YamlTest())
 
 ; --- Finalize ---
