@@ -229,4 +229,22 @@ class ParserTest {
 
         Assert.Equal("YamlSequenceEndEvent", Type(_parser.NextEvent()))
     }
+
+    /**
+    * @method Test_ParseTags
+    * Verifies that tags are correctly identified and attached to events.
+    */
+    Test_ParseTags() {
+        _input := "!my-tag value"
+        _scanner := _YamlScanner(_input)
+        _parser := _YamlParser(_scanner)
+
+        _parser.NextEvent() ; StreamStart
+        _parser.NextEvent() ; DocumentStart
+
+        _scalar := _parser.NextEvent()
+        Assert.Equal("YamlScalarEvent", Type(_scalar))
+        Assert.Equal("!my-tag", _scalar.tag)
+        Assert.Equal("value", _scalar.value)
+    }
 }

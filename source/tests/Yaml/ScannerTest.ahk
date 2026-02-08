@@ -169,6 +169,23 @@ class ScannerTest {
     }
 
     /**
+    * @method Test_ScanTags
+    * Verifies that local and global tags are identified.
+    */
+    Test_ScanTags() {
+        _input := "!local !!global"
+        _scanner := _YamlScanner(_input)
+
+        _t1 := _scanner.FetchToken()
+        Assert.Equal("Tag", _t1.type)
+        Assert.Equal("!local", _t1.value)
+
+        _t2 := _scanner.FetchToken()
+        Assert.Equal("Tag", _t2.type)
+        Assert.Equal("!!global", _t2.value)
+    }
+
+    /**
     * @method Test_ScanMultipleDocuments
     */
     Test_ScanMultipleDocuments() {

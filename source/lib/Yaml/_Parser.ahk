@@ -35,6 +35,11 @@ class _YamlParser {
     _pendingAnchor := ""
 
     /**
+    * @field {String} _pendingTag - Temporary storage for a tag name.
+    */
+    _pendingTag := ""
+
+    /**
     * @constructor
     * @param {Object} scanner - An instance of _YamlScanner.
     */
@@ -144,6 +149,12 @@ class _YamlParser {
             return this.NextEvent() ; Continue to actual node
         }
 
+        ; Property: Tag (!tag)
+        if (_token.type == "Tag") {
+            this._pendingTag := this._FetchToken().value
+            return this.NextEvent() ; Continue to actual node
+        }
+
         ; Property: Alias (*alias)
         if (_token.type == "Alias") {
             _aliasToken := this._FetchToken()
@@ -160,31 +171,37 @@ class _YamlParser {
         ; Block Sequence
         if (_token.type == "SequenceIndicator") {
             _anchor := this._pendingAnchor
+            _tag := this._pendingTag
             this._pendingAnchor := ""
+            this._pendingTag := ""
             this._states.Pop()
             this._states.Push("_StateBlockSequenceEnd")
             this._states.Push("_StateBlockSequenceEntry")
-            return YamlSequenceStartEvent("", _anchor, false, _token.line, _token.column)
+            return YamlSequenceStartEvent(_tag, _anchor, false, _token.line, _token.column)
         }
 
         ; Flow Sequence
         if (_token.type == "FlowSequenceStart") {
             _anchor := this._pendingAnchor
+            _tag := this._pendingTag
             this._pendingAnchor := ""
+            this._pendingTag := ""
             this._FetchToken()
             this._states.Pop()
             this._states.Push("_StateFlowSequenceNext")
-            return YamlSequenceStartEvent("", _anchor, true, _token.line, _token.column)
+            return YamlSequenceStartEvent(_tag, _anchor, true, _token.line, _token.column)
         }
 
         ; Flow Mapping
         if (_token.type == "FlowMappingStart") {
             _anchor := this._pendingAnchor
+            _tag := this._pendingTag
             this._pendingAnchor := ""
+            this._pendingTag := ""
             this._FetchToken()
             this._states.Pop()
             this._states.Push("_StateFlowMappingKey")
-            return YamlMappingStartEvent("", _anchor, true, _token.line, _token.column)
+            return YamlMappingStartEvent(_tag, _anchor, true, _token.line, _token.column)
         }
 
         if (_token.type == "Scalar") {
@@ -193,27 +210,33 @@ class _YamlParser {
             if (_next.type == "MappingIndicator") {
                 ; Transition to Mapping
                 _anchor := this._pendingAnchor
+                _tag := this._pendingTag
                 this._pendingAnchor := ""
+                this._pendingTag := ""
                 this._states.Pop()
                 this._states.Push("_StateBlockMappingEnd")
                 this._states.Push("_StateBlockMappingKey")
-                return YamlMappingStartEvent("", _anchor, false, _token.line, _token.column)
+                return YamlMappingStartEvent(_tag, _anchor, false, _token.line, _token.column)
             }
 
             ; Simple scalar node
             _anchor := this._pendingAnchor
+            _tag := this._pendingTag
             this._pendingAnchor := ""
+            this._pendingTag := ""
             this._FetchToken()
             this._states.Pop()
-            return YamlScalarEvent(_token.value, "", _anchor, 0, _token.line, _token.column)
+            return YamlScalarEvent(_token.value, _tag, _anchor, 0, _token.line, _token.column)
         }
 
         ; Handle empty values or end of structures
         if (_token.type == "Dedent" || _token.type == "StreamEnd" || _token.type == "DocumentStart") {
             _anchor := this._pendingAnchor
+            _tag := this._pendingTag
             this._pendingAnchor := ""
+            this._pendingTag := ""
             this._states.Pop()
-            return YamlScalarEvent("", "", _anchor, 0, _token.line, _token.column)
+            return YamlScalarEvent("", _tag, _anchor, 0, _token.line, _token.column)
         }
 
         throw YamlError("Expected scalar, collection, or indent, but found " . _token.type, _token.line, _token.column)

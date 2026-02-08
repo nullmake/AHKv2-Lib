@@ -127,6 +127,16 @@ class _YamlScanner {
             throw YamlError("Invalid " . _type . " name", this._line, this._column)
         }
 
+        ; Tags
+        if (_char == "!") {
+            if (RegExMatch(SubStr(this._source, this._pos), "^!!?[a-zA-Z0-9_-]*", &_match)) {
+                _val := _match[0]
+                _token := {type: "Tag", value: _val, line: this._line, column: this._column}
+                this._Move(StrLen(_val))
+                return _token
+            }
+        }
+
         ; Flow Indicators
         if (InStr("[]{},", _char)) {
             _type := (_char == "[") ? "FlowSequenceStart"
