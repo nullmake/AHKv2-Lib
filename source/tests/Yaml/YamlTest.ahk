@@ -61,4 +61,16 @@ class YamlTest {
         Assert.Equal("value", _obj["a"])
         Assert.Equal("value", _obj["b"])
     }
+
+    /**
+    * @method Test_LoadExplicitTags
+    * Verifies that !!int, !!bool, etc., force type conversion.
+    */
+    Test_LoadExplicitTags() {
+        _input := 'forced_int: !!int "123"`nforced_bool: !!bool "true"'
+        _obj := Yaml.Load(_input)
+
+        Assert.StrictEqual(123, _obj["forced_int"])
+        Assert.StrictEqual(true, _obj["forced_bool"])
+    }
 }

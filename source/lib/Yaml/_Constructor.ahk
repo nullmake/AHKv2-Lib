@@ -48,46 +48,61 @@ class _YamlConstructor {
 
     /**
     * @method _ConstructScalar
-    * Converts a scalar node to its native type based on JSON Schema.
-    * Only plain scalars (Style 0) are subject to type casting.
+    * Converts a scalar node to its native type based on JSON Schema and tags.
     */
     _ConstructScalar(node) {
         _val := node.value
+        _tag := node.tag
 
-        ; 1. Quoted scalars are always strings (YAML 1.2.2 - JSON Schema)
-        if (node.style != 0) {
-            return _val
-        }
-
-        ; 2. Null values (case-insensitive)
-        if (_val == "" || _val ~= "i)^null$" || _val == "~") {
-            return ""
-        }
-
-        ; 3. Boolean values (case-insensitive)
-        if (_val ~= "i)^true$") {
-            return true
-        }
-        if (_val ~= "i)^false$") {
-            return false
-        }
-
-        ; 4. Numbers (Integer and Float)
-        if (IsNumber(_val)) {
-            ; Hexadecimal check
-            if (_val ~= "i)^0x[0-9a-f]+$") {
+        ; 1. Explicit Tags (YAML 1.2.2 - 10.2.1)
+        if (_tag != "") {
+            if (_tag == "!!int") {
                 return Integer(_val)
             }
-            ; Return native numeric type (Integer or Float)
-            return _val + 0
+            if (_tag == "!!float") {
+                return Float(_val)
+            }
+            if (_tag == "!!bool") {
+                return (_val ~= "i)^true$") ? true : false
+            }
+            if (_tag == "!!str") {
+                return String(_val)
+            }
+            if (_tag == "!!null") {
+                return ""
+            }
         }
 
-        ; 5. Special floats
-        if (_val ~= "i)^\.inf$") {
-            return 9.223372036854775807e18
-        }
-        if (_val ~= "i)^\.nan$") {
-            return "NaN"
+        ; 2. Implicit Casting for Plain Scalars (Style 0)
+        if (node.style == 0) {
+            ; Null values (case-insensitive)
+            if (_val == "" || _val ~= "i)^null$" || _val == "~") {
+                return ""
+            }
+
+            ; Boolean values (case-insensitive)
+            if (_val ~= "i)^true$") {
+                return true
+            }
+            if (_val ~= "i)^false$") {
+                return false
+            }
+
+            ; Numbers
+            if (IsNumber(_val)) {
+                if (_val ~= "i)^0x[0-9a-f]+$") {
+                    return Integer(_val)
+                }
+                return _val + 0
+            }
+
+            ; Special floats
+            if (_val ~= "i)^\.inf$") {
+                return 9.223372036854775807e18
+            }
+            if (_val ~= "i)^\.nan$") {
+                return "NaN"
+            }
         }
 
         return _val
