@@ -5,7 +5,7 @@
  * @description Tokenizes YAML character stream and manages indentation.
  * @author nullmake
  * @license Apache-2.0
- *
+ * 
  * Copyright 2026 nullmake
  */
 
@@ -64,7 +64,7 @@ class _YamlScanner {
     /**
      * @method FetchToken
      * Advances and returns the next token from the stream.
-     * @returns {Object} Token object {Type, Value, Line, Column}
+     * @returns {Object} Token object {type, value, line, column}
      */
     FetchToken() {
         ; Return queued tokens first (virtual Indent/Dedent)
@@ -90,7 +90,7 @@ class _YamlScanner {
                 this._UnrollIndents(0)
                 return this.FetchToken()
             }
-            return {Type: "StreamEnd", Value: "", Line: this._line, Column: this._column}
+            return {type: "StreamEnd", value: "", line: this._line, column: this._column}
         }
 
         _char := SubStr(this._source, this._pos, 1)
@@ -106,21 +106,21 @@ class _YamlScanner {
 
         ; Sequence Indicator '-'
         if (_char == "-" && this._IsFollowedByWhitespace(this._pos + 1)) {
-            _token := {Type: "SequenceIndicator", Value: "-", Line: this._line, Column: this._column}
+            _token := {type: "SequenceIndicator", value: "-", line: this._line, column: this._column}
             this._Move(1)
             return _token
         }
 
         ; Mapping Indicator Lookahead
         if (RegExMatch(SubStr(this._source, this._pos), "^(?<_scalar>[^:#\s\n]+)(?<_indicator>:\s|:$|:\n)", &_match)) {
-            _token := {Type: "Scalar", Value: _match._scalar, Line: this._line, Column: this._column}
+            _token := {type: "Scalar", value: _match._scalar, line: this._line, column: this._column}
             this._Move(StrLen(_match._scalar))
             return _token
         }
 
         ; Mapping Indicator ':'
         if (_char == ":" && this._IsFollowedByWhitespace(this._pos + 1)) {
-            _token := {Type: "MappingIndicator", Value: ":", Line: this._line, Column: this._column}
+            _token := {type: "MappingIndicator", value: ":", line: this._line, column: this._column}
             this._Move(1)
             return _token
         }
@@ -128,14 +128,14 @@ class _YamlScanner {
         ; Default Plain Scalar
         if (RegExMatch(SubStr(this._source, this._pos), "^[^:\s#\n]+", &_match)) {
             _val := _match[0]
-            _token := {Type: "Scalar", Value: _val, Line: this._line, Column: this._column}
+            _token := {type: "Scalar", value: _val, line: this._line, column: this._column}
             this._Move(StrLen(_val))
             return _token
         }
 
         ; Fallback for any single character
         _val := SubStr(this._source, this._pos, 1)
-        _token := {Type: "Scalar", Value: _val, Line: this._line, Column: this._column}
+        _token := {type: "Scalar", value: _val, line: this._line, column: this._column}
         this._Move(1)
         return _token
     }
@@ -164,7 +164,7 @@ class _YamlScanner {
         ; Check for Document Boundary (---)
         if (_currentIndent == 0 && RegExMatch(SubStr(this._source, this._pos), "^---(\s|\n|$)")) {
             this._UnrollIndents(0)
-            this._pendingTokens.Push({Type: "DocumentStart", Value: "---", Line: this._line, Column: 1})
+            this._pendingTokens.Push({type: "DocumentStart", value: "---", line: this._line, column: 1})
             this._Move(3)
             return
         }
@@ -179,7 +179,7 @@ class _YamlScanner {
         _lastIndent := this._indentStack[this._indentStack.Length]
         if (_currentIndent > _lastIndent) {
             this._indentStack.Push(_currentIndent)
-            this._pendingTokens.Push({Type: "Indent", Value: _currentIndent, Line: this._line, Column: 1})
+            this._pendingTokens.Push({type: "Indent", value: _currentIndent, line: this._line, column: 1})
         } else if (_currentIndent < _lastIndent) {
             this._UnrollIndents(_currentIndent)
         }
@@ -193,9 +193,9 @@ class _YamlScanner {
     _UnrollIndents(targetIndent) {
         while (this._indentStack.Length > 1 && this._indentStack[this._indentStack.Length] > targetIndent) {
             this._indentStack.Pop()
-            this._pendingTokens.Push({Type: "Dedent", Value: "", Line: this._line, Column: 1})
+            this._pendingTokens.Push({type: "Dedent", value: "", line: this._line, column: 1})
         }
-
+        
         ; Optional: Validate that targetIndent matches a previous level (YAML 1.2.2 - 6.1)
         if (this._indentStack[this._indentStack.Length] != targetIndent) {
              throw YamlError("Indentation level mismatch", this._line, targetIndent + 1)

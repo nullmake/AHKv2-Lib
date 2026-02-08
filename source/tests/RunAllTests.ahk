@@ -25,6 +25,7 @@
 #Include WindowTest.ahk
 #Include Yaml/ScannerTest.ahk
 #Include Yaml/ParserTest.ahk
+#Include Yaml/YamlTest.ahk
 
 ; --- Setup Environment ---
 logDir := (A_Args.Length > 0) ? A_Args[1] : A_ScriptDir . "\logs"
@@ -45,6 +46,7 @@ _runner.Run(ServiceLocatorTest())
 _runner.Run(WindowTest())
 _runner.Run(ScannerTest())
 _runner.Run(ParserTest())
+_runner.Run(YamlTest())
 
 ; --- Finalize ---
 _runner.PrintFinalSummary()

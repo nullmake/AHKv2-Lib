@@ -7,18 +7,6 @@
  * @license Apache-2.0
  * 
  * Copyright 2026 nullmake
- * 
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- * 
- *     http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
  */
 
 #Include _Scanner.ahk
@@ -32,6 +20,10 @@
 #Include _Nodes.ahk
 #Include _Errors.ahk
 
+/**
+ * @class Yaml
+ * Provides high-level Load and Dump functions for YAML data.
+ */
 class Yaml {
     /**
      * @method Load
@@ -40,8 +32,17 @@ class Yaml {
      * @returns {Any} - Map, Array, or Scalar values.
      */
     static Load(input) {
-        ; Pipeline: Scanner -> Parser -> Composer -> Constructor
-        return ""
+        _scanner := _YamlScanner(input)
+        _parser := _YamlParser(_scanner)
+        _composer := _YamlComposer(_parser)
+        
+        _rootNode := _composer.Compose()
+        if (_rootNode == "") {
+            return ""
+        }
+        
+        _constructor := _YamlConstructor()
+        return _constructor.Construct(_rootNode)
     }
 
     /**
@@ -51,7 +52,7 @@ class Yaml {
      * @returns {String} - The resulting YAML text.
      */
     static Dump(obj) {
-        ; Pipeline: Representer -> Serializer -> Presenter
+        ; TODO: Implement Dump pipeline
         return ""
     }
 }
