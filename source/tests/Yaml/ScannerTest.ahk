@@ -1,6 +1,4 @@
 #Requires AutoHotkey v2.0
-#Include ../../lib/Yaml/_Scanner.ahk
-#Include ../../lib/Yaml/_Errors.ahk
 
 /**
  * @class ScannerTest

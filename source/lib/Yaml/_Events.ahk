@@ -5,7 +5,7 @@
  * @description Definition of YAML Serialization Events.
  * @author nullmake
  * @license Apache-2.0
- * 
+ *
  * Copyright 2026 nullmake
  */
 
@@ -25,8 +25,11 @@ class YamlEvent {
     }
 }
 
-class YamlStreamStartEvent extends YamlEvent {}
-class YamlStreamEndEvent extends YamlEvent {}
+class YamlStreamStartEvent extends YamlEvent {
+}
+
+class YamlStreamEndEvent extends YamlEvent {
+}
 
 class YamlDocumentStartEvent extends YamlEvent {
     /** @field {Boolean} explicit - True if '---' is present */
@@ -90,8 +93,14 @@ class YamlCollectionStartEvent extends YamlEvent {
     }
 }
 
-class YamlSequenceStartEvent extends YamlCollectionStartEvent {}
-class YamlSequenceEndEvent extends YamlEvent {}
+class YamlSequenceStartEvent extends YamlCollectionStartEvent {
+}
 
-class YamlMappingStartEvent extends YamlCollectionStartEvent {}
-class YamlMappingEndEvent extends YamlEvent {}
+class YamlSequenceEndEvent extends YamlEvent {
+}
+
+class YamlMappingStartEvent extends YamlCollectionStartEvent {
+}
+
+class YamlMappingEndEvent extends YamlEvent {
+}

@@ -1,4 +1,5 @@
 #Requires AutoHotkey v2.0
+; --- Library Includes ---
 #Include ../lib/Logger.ahk
 #Include ../lib/ServiceLocator.ahk
 #Include ../lib/Assert.ahk
@@ -7,6 +8,15 @@
 #Include ../lib/Window.ahk
 #Include ../lib/TestRunner.ahk
 
+; --- Yaml Library ---
+#Include ../lib/Yaml/_Errors.ahk
+#Include ../lib/Yaml/_Events.ahk
+#Include ../lib/Yaml/_Nodes.ahk
+#Include ../lib/Yaml/_Scanner.ahk
+#Include ../lib/Yaml/_Parser.ahk
+#Include ../lib/Yaml/Yaml.ahk
+
+; --- Test Suite Includes ---
 #Include AssertTest.ahk
 #Include ImeTest.ahk
 #Include KeyEventTest.ahk
@@ -14,23 +24,19 @@
 #Include ServiceLocatorTest.ahk
 #Include WindowTest.ahk
 #Include Yaml/ScannerTest.ahk
+#Include Yaml/ParserTest.ahk
 
-; Set up environment
-; Allow log directory to be specified via command line argument
+; --- Setup Environment ---
 logDir := (A_Args.Length > 0) ? A_Args[1] : A_ScriptDir . "\logs"
-
 if (!DirExist(logDir)) {
     DirCreate(logDir)
 }
 
-; Initialize Logger
 _logger := Logger(logDir, 1000, 10)
 ServiceLocator.Register("Logger", _logger)
-
-; Initialize Runner
 _runner := TestRunner(_logger)
 
-; Run Suites
+; --- Run Suites ---
 _runner.Run(AssertTest())
 _runner.Run(ImeTest())
 _runner.Run(KeyEventTest())
@@ -38,19 +44,14 @@ _runner.Run(LoggerTest())
 _runner.Run(ServiceLocatorTest())
 _runner.Run(WindowTest())
 _runner.Run(ScannerTest())
+_runner.Run(ParserTest())
 
-; Summary
+; --- Finalize ---
 _runner.PrintFinalSummary()
 _logger.Flush("TEST")
 
-; Exit with code based on results
 totalFail := 0
 for result in _runner.suiteResults {
     totalFail += result.Fail
 }
-
-if (totalFail > 0) {
-    ExitApp(1)
-} else {
-    ExitApp(0)
-}
+ExitApp(totalFail > 0)
