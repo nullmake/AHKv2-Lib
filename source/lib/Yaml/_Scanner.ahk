@@ -51,6 +51,16 @@ class _YamlScanner {
     _isAtLineStart := true
 
     /**
+    * @field {Integer} _loopCount - Safety counter for infinite loop detection.
+    */
+    _loopCount := 0
+
+    /**
+    * @field {Integer} _lastPos - Last recorded position to detect progress.
+    */
+    _lastPos := 0
+
+    /**
     * @constructor
     * @param {String} input - Raw YAML string.
     */
@@ -67,6 +77,17 @@ class _YamlScanner {
     * @returns {Object} Token object {type, value, line, column, style}
     */
     FetchToken() {
+        ; Safety: Prevent infinite loops by checking if position advances
+        if (this._pos == this._lastPos) {
+            this._loopCount++
+            if (this._loopCount > 1000) {
+                throw YamlError("Infinite loop detected in Scanner at position " . this._pos, this._line, this._column)
+            }
+        } else {
+            this._lastPos := this._pos
+            this._loopCount := 0
+        }
+
         ; Return queued tokens first (virtual Indent/Dedent)
         if (this._pendingTokens.Length > 0) {
             return this._pendingTokens.RemoveAt(1)

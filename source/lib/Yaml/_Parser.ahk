@@ -40,6 +40,11 @@ class _YamlParser {
     _pendingTag := ""
 
     /**
+    * @field {Integer} _loopDetector - Counter for transitions without token consumption.
+    */
+    _loopDetector := 0
+
+    /**
     * @constructor
     * @param {Object} scanner - An instance of _YamlScanner.
     */
@@ -57,6 +62,12 @@ class _YamlParser {
     NextEvent() {
         if (this._states.Length == 0) {
             return ""
+        }
+
+        ; Safety: Prevent infinite loops without progress
+        this._loopDetector++
+        if (this._loopDetector > 1000) {
+            throw YamlError("Infinite loop detected in Parser: too many state transitions without token consumption.")
         }
 
         _stateName := this._states[this._states.Length]
@@ -84,6 +95,7 @@ class _YamlParser {
     * Returns and consumes the next token from the queue or scanner.
     */
     _FetchToken() {
+        this._loopDetector := 0 ; Progress made
         if (this._tokens.Length > 0) {
             return this._tokens.RemoveAt(1)
         }
