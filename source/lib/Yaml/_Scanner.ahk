@@ -254,6 +254,7 @@ class _YamlScanner {
 
     /**
     * @method _HandleLineStart
+    * Processes indentation and document boundaries at the start of a line.
     */
     _HandleLineStart() {
         this._isAtLineStart := false
@@ -272,7 +273,7 @@ class _YamlScanner {
             }
         }
 
-        ; Check for Document Boundaries (---, ...) or Directives (%)
+        ; Check for Document Boundaries (---, ...) or Directives (%) at indent 0
         if (_currentIndent == 0) {
             _rem := SubStr(this._source, this._pos)
             if (RegExMatch(_rem, "^---(\s|\n|$)")) {
@@ -286,7 +287,6 @@ class _YamlScanner {
                 this._Move(3)
                 return
             } else if (SubStr(_rem, 1, 1) == "%") {
-                ; Parse directive line
                 RegExMatch(_rem, "^%[^\n]*", &_match)
                 this._pendingTokens.Push({type: "Directive", value: _match[0], line: this._line, column: 1})
                 this._Move(StrLen(_match[0]))
@@ -294,13 +294,9 @@ class _YamlScanner {
             }
         }
 
-        ; Skip empty lines or full-line comments
+        ; Skip empty lines or comment-only lines without affecting indentation stack
         _nextChar := SubStr(this._source, this._pos, 1)
-        if (this._pos <= this._sourceLength && (_nextChar == "`n" || _nextChar == "#")) {
-            if (_nextChar == "#") {
-                this._SkipComment()
-            }
-            this._isAtLineStart := true
+        if (_nextChar == "`n" || _nextChar == "#" || this._pos > this._sourceLength) {
             return
         }
 
@@ -308,7 +304,7 @@ class _YamlScanner {
         _lastIndent := this._indentStack[this._indentStack.Length]
         if (_currentIndent > _lastIndent) {
             this._indentStack.Push(_currentIndent)
-            this._pendingTokens.Push({type: "Indent", value: _currentIndent, line: this._line, column: 1})
+            this._pendingTokens.Push({type: "Indent", value: _currentIndent, line: this._line, column: _currentIndent + 1})
         } else if (_currentIndent < _lastIndent) {
             this._UnrollIndents(_currentIndent)
         }
@@ -316,15 +312,16 @@ class _YamlScanner {
 
     /**
     * @method _UnrollIndents
+    * Emits Dedent tokens until the stack matches the target indentation.
     */
-    _UnrollIndents(targetIndent) {
-        while (this._indentStack.Length > 1 && this._indentStack[this._indentStack.Length] > targetIndent) {
+    _UnrollIndents(_targetIndent) {
+        while (this._indentStack.Length > 1 && this._indentStack[this._indentStack.Length] > _targetIndent) {
             this._indentStack.Pop()
-            this._pendingTokens.Push({type: "Dedent", value: "", line: this._line, column: 1})
+            this._pendingTokens.Push({type: "Dedent", value: _targetIndent, line: this._line, column: 1})
         }
 
-        if (this._indentStack[this._indentStack.Length] != targetIndent) {
-            throw YamlError("Indentation level mismatch", this._line, targetIndent + 1)
+        if (this._indentStack[this._indentStack.Length] != _targetIndent) {
+            throw YamlError("Indentation level mismatch (expected " . this._indentStack[this._indentStack.Length] . " but found " . _targetIndent . ")", this._line, 1)
         }
     }
 
