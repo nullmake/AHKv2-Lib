@@ -312,7 +312,7 @@ class _YamlParser {
             this._states.Push("_StateBlockSequenceNext")
             this._states.Push("_StateBlockMappingEnd")
             this._states.Push("_StateBlockMappingKey")
-            return YamlMappingStartEvent("", "", false, 0, _token.line, _token.column)
+            return YamlMappingStartEvent("", "", false, _token.line, _token.column)
         }
 
         this._states.Pop()

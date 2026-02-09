@@ -220,9 +220,14 @@ class _YamlScanner {
                     }
 
                     ; A plain scalar continues if it's indented more than the current block
+                    ; AND it doesn't look like a new indicator (- , ? , etc.)
                     _currentBlockIndent := this._indentStack[this._indentStack.Length]
                     if (_nextIndent > _currentBlockIndent) {
-                        if (RegExMatch(SubStr(this._source, this._pos), _plainRegex, &_nextMatch)) {
+                        _rem := SubStr(this._source, this._pos)
+                        ; Indicators that start a new block node
+                        if (RegExMatch(_rem, "^(?:- |[?:] |\.\.\. |--- )")) {
+                            ; Stop folding if we hit an indicator
+                        } else if (RegExMatch(_rem, _plainRegex, &_nextMatch)) {
                             _val .= " " . RTrim(_nextMatch[0])
                             this._Move(StrLen(_nextMatch[0]))
                             continue
