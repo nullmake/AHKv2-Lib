@@ -63,6 +63,7 @@ class EventCanonicalizer {
         if (event.anchor != "") {
             _props .= " &" . event.anchor
         }
+        
         if (event.tag != "") {
             _props .= " <" . this._NormalizeTag(event.tag) . ">"
         }

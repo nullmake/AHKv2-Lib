@@ -213,8 +213,11 @@ class _YamlScanner {
                     if (_nextIndent > 0) {
                         _rem := SubStr(this._source, this._pos)
                         ; Indicators that start a new block node (don't fold)
+                        ; Special check for mapping key: a scalar followed by ":"
                         if (RegExMatch(_rem, "^(?:- |[?:] |\.\.\. |--- )")) {
                             ; Stop folding
+                        } else if (RegExMatch(_rem, "^[^\s\n]+:")) {
+                            ; Stop folding if it looks like a mapping key
                         } else if (RegExMatch(_rem, _plainRegex, &_nextMatch)) {
                             _val .= " " . RTrim(_nextMatch[0])
                             this._Move(StrLen(_nextMatch[0]))

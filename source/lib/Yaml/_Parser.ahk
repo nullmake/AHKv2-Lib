@@ -198,14 +198,10 @@ class _YamlParser {
         ; Property: Alias (*alias)
         if (_token.type == "Alias") {
             _aliasToken := this._FetchToken()
+            this._pendingAnchor := ""
+            this._pendingTag := ""
             this._states.Pop()
             return YamlAliasEvent(_aliasToken.value, _aliasToken.line, _aliasToken.column)
-        }
-
-        ; Nested structure begins with an Indent token
-        if (_token.type == "Indent") {
-            this._FetchToken()
-            return ""
         }
 
         ; Block Sequence
@@ -273,25 +269,23 @@ class _YamlParser {
             return YamlScalarEvent(_token.value, _tag, _anchor, _token.style, _token.line, _token.column)
         }
 
-        ; Handle end of structures or document boundaries
-        if (_token.type == "StreamEnd" || _token.type == "DocumentStart" || _token.type == "DocumentEnd") {
-            _anchor := this._pendingAnchor
-            _tag := this._pendingTag
-            this._pendingAnchor := ""
-            this._pendingTag := ""
-            this._states.Pop()
-
-            ; Implicit null scalar
-            return YamlScalarEvent("", _tag, _anchor, 0, _token.line, _token.column)
-        }
-
-        throw YamlError("Expected scalar, collection, or indent, but found " . _token.type, _token.line, _token.column)
+                ; Handle end of structures or document boundaries
+                _isStructureEnd := (_token.type == "StreamEnd" || _token.type == "DocumentStart" || _token.type == "DocumentEnd")
+                _isDedent := (_token.column < this._blockIndents[this._blockIndents.Length])
+        
+                if (_isStructureEnd || _isDedent) {
+                    _anchor := this._pendingAnchor
+                    _tag := this._pendingTag
+                    this._pendingAnchor := ""
+                    this._pendingTag := ""
+                    this._states.Pop()
+        
+                    ; If we have attributes, we MUST emit a scalar even if it's empty
+                    return YamlScalarEvent("", _tag, _anchor, 0, _token.line, _token.column)
+                }
+                throw YamlError("Expected scalar, collection, or indent, but found " . _token.type, _token.line, _token.column)
     }
 
-    /**
-    * @method _StateBlockSequenceEntry
-    * Handles a single '-' entry in a block sequence.
-    */
     _StateBlockSequenceEntry() {
         this._FetchToken() ; Consumes '-'
 
@@ -305,7 +299,7 @@ class _YamlParser {
             this._states.Push("_StateBlockMappingKey")
             
             this._blockIndents.Push(_token.column)
-            return YamlMappingStartEvent("", "", false, _token.line, _token.column)
+            return YamlMappingStartEvent(this._pendingTag, this._pendingAnchor, false, _token.line, _token.column)
         }
 
         this._states.Pop()
@@ -322,8 +316,10 @@ class _YamlParser {
     _StateBlockSequenceNext() {
         _token := this._PeekToken()
 
-        ; Implicit termination: if next token is to the left of the current sequence
-        if (_token.column < this._blockIndents[this._blockIndents.Length]) {
+        ; Implicit termination: if next token is to the left of the current sequence,
+        ; OR if it's NOT a sequence indicator at the same level.
+        _currentIndent := this._blockIndents[this._blockIndents.Length]
+        if (_token.column < _currentIndent || (_token.column == _currentIndent && _token.type != "SequenceIndicator")) {
             this._states.Pop()
             return "" ; Proceed to BlockSequenceEnd via loop
         }
@@ -359,8 +355,10 @@ class _YamlParser {
     _StateBlockMappingKey() {
         _token := this._PeekToken()
 
-        ; Implicit termination: if next token is to the left of the current mapping
-        if (_token.column < this._blockIndents[this._blockIndents.Length]) {
+        ; Implicit termination: if next token is to the left of the current mapping,
+        ; OR if it's a sequence indicator at the SAME level (compact notation).
+        _currentIndent := this._blockIndents[this._blockIndents.Length]
+        if (_token.column < _currentIndent || (_token.column == _currentIndent && _token.type == "SequenceIndicator")) {
             this._states.Pop()
             return "" ; Proceed to BlockMappingEnd via loop
         }
@@ -412,19 +410,21 @@ class _YamlParser {
         if (_token.type == "MappingIndicator") {
             this._FetchToken() ; Consumes ':'
 
+            ; If value is empty OR only has attributes, we MUST handle it.
+            ; Transition to BlockNode ensures attributes are captured.
             this._states.Pop()
             this._states.Push("_StateBlockMappingKey")
-            this._states.Push("_StateBlockNode") ; Prepare to parse the value node
+            this._states.Push("_StateBlockNode")
 
             return ""
         }
 
-        ; Value is omitted (implicit null)
+        ; Value is missing entirely (e.g., "key: \nnext_key: ...")
         this._states.Pop()
         this._states.Push("_StateBlockMappingKey")
 
         ; Emit an implicit null scalar event for the missing value
-        return YamlScalarEvent("", "", "", 0, _token.line, _token.column)
+        return YamlScalarEvent("", this._pendingTag, this._pendingAnchor, 0, _token.line, _token.column)
     }
 
     /**
