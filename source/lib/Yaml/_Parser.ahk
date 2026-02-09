@@ -65,25 +65,35 @@ class _YamlParser {
     * @returns {YamlEvent}
     */
     NextEvent() {
-        if (this._states.Length == 0) {
-            return ""
-        }
+        loop {
+            if (this._states.Length == 0) {
+                return ""
+            }
 
-        ; Return pending DocumentStart if it exists
-        if (this._pendingDocumentStart) {
-            _event := this._pendingDocumentStart
-            this._pendingDocumentStart := ""
-            return _event
-        }
+            ; Return pending DocumentStart if it exists
+            if (this._pendingDocumentStart) {
+                _event := this._pendingDocumentStart
+                this._pendingDocumentStart := ""
+                this._loopDetector := 0
+                return _event
+            }
 
-        ; Safety: Prevent infinite loops without progress
-        this._loopDetector++
-        if (this._loopDetector > 1000) {
-            throw YamlError("Infinite loop detected in Parser: too many state transitions without token consumption.")
-        }
+            ; Safety: Prevent infinite loops without progress
+            this._loopDetector++
+            if (this._loopDetector > 1000) {
+                throw YamlError("Infinite loop detected in Parser: too many state transitions without token consumption.")
+            }
 
-        _stateName := this._states[this._states.Length]
-        return this.%_stateName%()
+            _stateName := this._states[this._states.Length]
+            _event := this.%_stateName%()
+
+            ; If an event was generated, return it and reset detector.
+            ; Otherwise, continue to the next state.
+            if (_event !== "") {
+                this._loopDetector := 0
+                return _event
+            }
+        }
     }
 
     /**
@@ -120,7 +130,7 @@ class _YamlParser {
     */
     _EmitPendingStart() {
         if (this._pendingDocumentStart) {
-            return this.NextEvent()
+            return ""
         }
         return this.NextEvent()
     }
@@ -215,7 +225,7 @@ class _YamlParser {
         ; Nested structure begins with an Indent token
         if (_token.type == "Indent") {
             this._FetchToken()
-            return this.NextEvent()
+            return ""
         }
 
         ; Block Sequence
@@ -283,7 +293,7 @@ class _YamlParser {
         if (_token.type == "Dedent" || _token.type == "StreamEnd" || _token.type == "DocumentStart" || _token.type == "DocumentEnd") {
             if (_token.type == "Dedent") {
                 this._FetchToken()
-                return this.NextEvent()
+                return ""
             }
 
             _anchor := this._pendingAnchor
@@ -294,7 +304,7 @@ class _YamlParser {
 
             ; If DocumentStart is still pending, emit it before the scalar
             if (this._pendingDocumentStart) {
-                return this.NextEvent()
+                return ""
             }
 
             ; Implicit null scalar
@@ -315,7 +325,7 @@ class _YamlParser {
         this._states.Push("_StateBlockSequenceNext")
         this._states.Push("_StateBlockNode")
 
-        return this.NextEvent()
+        return ""
     }
 
     /**
@@ -328,7 +338,7 @@ class _YamlParser {
         if (_token.type == "SequenceIndicator") {
             this._states.Pop()
             this._states.Push("_StateBlockSequenceEntry")
-            return this.NextEvent()
+            return ""
         }
 
         if (_token.type == "Dedent" || _token.type == "StreamEnd" || _token.type == "DocumentStart" || _token.type == "DocumentEnd") {
@@ -336,7 +346,7 @@ class _YamlParser {
                 this._FetchToken()
             }
             this._states.Pop()
-            return this.NextEvent() ; Proceed to BlockSequenceEnd
+            return "" ; Proceed to BlockSequenceEnd
         }
 
         throw YamlError("Expected sequence entry or dedent, but found " . _token.type, _token.line, _token.column)
@@ -363,22 +373,36 @@ class _YamlParser {
                 this._FetchToken()
             }
             this._states.Pop()
-            return this.NextEvent() ; Proceed to BlockMappingEnd
+            return "" ; Proceed to BlockMappingEnd via loop
         }
 
         if (_token.type == "Scalar") {
+            _keyToken := this._FetchToken() ; Consumes Key Scalar
             this._states.Pop()
             this._states.Push("_StateBlockMappingValue")
-            return this.NextEvent()
+
+            ; Emit the key as a scalar event
+            _style := _keyToken.HasProp("style") ? _keyToken.style : 0
+            return YamlScalarEvent(_keyToken.value, "", "", _style, _keyToken.line, _keyToken.column)
+        }
+
+        if (_token.type == "ComplexKeyIndicator") {
+            this._FetchToken() ; Consumes '?'
+            this._states.Pop()
+            this._states.Push("_StateBlockMappingValue")
+            this._states.Push("_StateBlockNode") ; Prepare to parse the key node
+            return ""
         }
 
         if (_token.type == "MappingIndicator") {
             ; Empty key case
+            _indicator := this._FetchToken() ; Consumes ':'
             this._states.Pop()
-            this._states.Push("_StateBlockMappingValue")
+            this._states.Push("_StateBlockMappingKey")
+            this._states.Push("_StateBlockNode") ; Prepare to parse the value node
 
-            ; Implicit empty scalar for the key
-            return YamlScalarEvent("", "", "", 0, _token.line, _token.column)
+            ; Emit implicit null scalar for the key
+            return YamlScalarEvent("", "", "", 0, _indicator.line, _indicator.column)
         }
 
         throw YamlError("Expected mapping key or dedent, but found " . _token.type, _token.line, _token.column)
@@ -389,18 +413,24 @@ class _YamlParser {
     * Processes a single key-value pair in a block mapping.
     */
     _StateBlockMappingValue() {
-        _keyToken := this._FetchToken() ; Consumes Key
+        _token := this._PeekToken()
 
-        _indicator := this._FetchToken() ; Should be ':'
-        if (_indicator.type != "MappingIndicator") {
-            throw YamlError("Expected ':' after mapping key", _indicator.line, _indicator.column)
+        if (_token.type == "MappingIndicator") {
+            this._FetchToken() ; Consumes ':'
+
+            this._states.Pop()
+            this._states.Push("_StateBlockMappingKey")
+            this._states.Push("_StateBlockNode") ; Prepare to parse the value node
+
+            return ""
         }
 
+        ; Value is omitted (implicit null)
         this._states.Pop()
         this._states.Push("_StateBlockMappingKey")
-        this._states.Push("_StateBlockNode")
 
-        return YamlScalarEvent(_keyToken.value, "", "", _keyToken.style, _keyToken.line, _keyToken.column)
+        ; Emit an implicit null scalar event for the missing value
+        return YamlScalarEvent("", "", "", 0, _token.line, _token.column)
     }
 
     /**

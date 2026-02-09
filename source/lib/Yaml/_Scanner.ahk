@@ -178,6 +178,13 @@ class _YamlScanner {
             return _token
         }
 
+        ; Complex Key Indicator '?'
+        if (_char == "?" && this._IsFollowedByWhitespace(this._pos + 1)) {
+            _token := {type: "ComplexKeyIndicator", value: "?", line: this._line, column: this._column}
+            this._Move(1)
+            return _token
+        }
+
         ; Mapping Indicator ':'
         if (_char == ":" && (this._IsFollowedByWhitespace(this._pos + 1) || InStr("]}", SubStr(this._source, this._pos + 1, 1)))) {
             _token := {type: "MappingIndicator", value: ":", line: this._line, column: this._column}
