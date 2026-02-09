@@ -372,8 +372,7 @@ class _YamlParser {
             return this.NextEvent()
         }
 
-        this._FetchToken()
-        return this._StateBlockMappingKey()
+        throw YamlError("Expected mapping key or dedent, but found " . _token.type, _token.line, _token.column)
     }
 
     /**
@@ -382,7 +381,11 @@ class _YamlParser {
     */
     _StateBlockMappingValue() {
         _keyToken := this._FetchToken() ; Consumes Key
-        this._FetchToken() ; Consumes ':'
+
+        _indicator := this._FetchToken() ; Should be ':'
+        if (_indicator.type != "MappingIndicator") {
+            throw YamlError("Expected ':' after mapping key", _indicator.line, _indicator.column)
+        }
 
         this._states.Pop()
         this._states.Push("_StateBlockMappingKey")
