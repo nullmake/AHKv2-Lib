@@ -41,19 +41,20 @@ class ScannerTest {
         _input := "key:`n  child: value"
         _scanner := _YamlScanner(_input)
 
-        _scanner.FetchToken() ; key
+        _tKey := _scanner.FetchToken() ; key
+        Assert.Equal("key", _tKey.value)
+        Assert.Equal(1, _tKey.column)
+        
         _scanner.FetchToken() ; :
 
-        _tIndent := _scanner.FetchToken()
-        Assert.Equal("Indent", _tIndent.type)
-        Assert.Equal(2, _tIndent.value)
+        _tChild := _scanner.FetchToken()
+        Assert.Equal("Scalar", _tChild.type)
+        Assert.Equal("child", _tChild.value)
+        Assert.Equal(3, _tChild.column) ; 2 spaces indent = column 3
 
-        _scanner.FetchToken() ; child
         _scanner.FetchToken() ; :
         _scanner.FetchToken() ; value
 
-        _tDedent := _scanner.FetchToken()
-        Assert.Equal("Dedent", _tDedent.type)
         Assert.Equal("StreamEnd", _scanner.FetchToken().type)
     }
 

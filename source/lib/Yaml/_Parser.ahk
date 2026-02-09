@@ -274,12 +274,7 @@ class _YamlParser {
         }
 
         ; Handle end of structures or document boundaries
-        if (_token.type == "Dedent" || _token.type == "StreamEnd" || _token.type == "DocumentStart" || _token.type == "DocumentEnd") {
-            if (_token.type == "Dedent") {
-                this._FetchToken()
-                return ""
-            }
-
+        if (_token.type == "StreamEnd" || _token.type == "DocumentStart" || _token.type == "DocumentEnd") {
             _anchor := this._pendingAnchor
             _tag := this._pendingTag
             this._pendingAnchor := ""
@@ -339,12 +334,9 @@ class _YamlParser {
             return ""
         }
 
-        if (_token.type == "Dedent" || _token.type == "StreamEnd" || _token.type == "DocumentStart" || _token.type == "DocumentEnd") {
-            if (_token.type == "Dedent") {
-                this._FetchToken()
-            }
+        if (_token.type == "StreamEnd" || _token.type == "DocumentStart" || _token.type == "DocumentEnd") {
             this._states.Pop()
-            return "" ; Proceed to BlockSequenceEnd
+            return "" ; Proceed to BlockSequenceEnd via loop
         }
 
         throw YamlError("Expected sequence entry or dedent, but found " . _token.type, _token.line, _token.column)
@@ -373,10 +365,7 @@ class _YamlParser {
             return "" ; Proceed to BlockMappingEnd via loop
         }
 
-        if (_token.type == "Dedent" || _token.type == "StreamEnd" || _token.type == "DocumentStart" || _token.type == "DocumentEnd") {
-            if (_token.type == "Dedent") {
-                this._FetchToken()
-            }
+        if (_token.type == "StreamEnd" || _token.type == "DocumentStart" || _token.type == "DocumentEnd") {
             this._states.Pop()
             return "" ; Proceed to BlockMappingEnd via loop
         }

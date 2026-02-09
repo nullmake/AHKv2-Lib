@@ -36,11 +36,6 @@ class _YamlScanner {
     _sourceLength := 0
 
     /**
-    * @field {Array} _indentStack - Stack of indentation levels (absolute columns).
-    */
-    _indentStack := [0]
-
-    /**
     * @field {Array} _pendingTokens - Queue for Indent/Dedent/Document tokens.
     */
     _pendingTokens := []
@@ -106,11 +101,6 @@ class _YamlScanner {
 
         ; Handle end of stream
         if (this._pos > this._sourceLength) {
-            ; Finalize indentation before ending stream
-            if (this._indentStack.Length > 1) {
-                this._UnrollIndents(0)
-                return this.FetchToken()
-            }
             return {type: "StreamEnd", value: "", line: this._line, column: this._column}
         }
 
@@ -219,14 +209,12 @@ class _YamlScanner {
                         this._Move(1)
                     }
 
-                    ; A plain scalar continues if it's indented more than the current block
-                    ; AND it doesn't look like a new indicator (- , ? , etc.)
-                    _currentBlockIndent := this._indentStack[this._indentStack.Length]
-                    if (_nextIndent > _currentBlockIndent) {
+                    ; A plain scalar continues if the next line is indented
+                    if (_nextIndent > 0) {
                         _rem := SubStr(this._source, this._pos)
-                        ; Indicators that start a new block node
+                        ; Indicators that start a new block node (don't fold)
                         if (RegExMatch(_rem, "^(?:- |[?:] |\.\.\. |--- )")) {
-                            ; Stop folding if we hit an indicator
+                            ; Stop folding
                         } else if (RegExMatch(_rem, _plainRegex, &_nextMatch)) {
                             _val .= " " . RTrim(_nextMatch[0])
                             this._Move(StrLen(_nextMatch[0]))
@@ -254,7 +242,7 @@ class _YamlScanner {
 
     /**
     * @method _HandleLineStart
-    * Processes indentation and document boundaries at the start of a line.
+    * Just marks that we are no longer at line start and moves past leading spaces.
     */
     _HandleLineStart() {
         this._isAtLineStart := false
@@ -277,12 +265,10 @@ class _YamlScanner {
         if (_currentIndent == 0) {
             _rem := SubStr(this._source, this._pos)
             if (RegExMatch(_rem, "^---(\s|\n|$)")) {
-                this._UnrollIndents(0)
                 this._pendingTokens.Push({type: "DocumentStart", value: "---", line: this._line, column: 1})
                 this._Move(3)
                 return
             } else if (RegExMatch(_rem, "^\.\.\.(\s|\n|$)")) {
-                this._UnrollIndents(0)
                 this._pendingTokens.Push({type: "DocumentEnd", value: "...", line: this._line, column: 1})
                 this._Move(3)
                 return
@@ -294,35 +280,8 @@ class _YamlScanner {
             }
         }
 
-        ; Skip empty lines or comment-only lines without affecting indentation stack
-        _nextChar := SubStr(this._source, this._pos, 1)
-        if (_nextChar == "`n" || _nextChar == "#" || this._pos > this._sourceLength) {
-            return
-        }
-
-        ; Compare with current indentation stack
-        _lastIndent := this._indentStack[this._indentStack.Length]
-        if (_currentIndent > _lastIndent) {
-            this._indentStack.Push(_currentIndent)
-            this._pendingTokens.Push({type: "Indent", value: _currentIndent, line: this._line, column: _currentIndent + 1})
-        } else if (_currentIndent < _lastIndent) {
-            this._UnrollIndents(_currentIndent)
-        }
-    }
-
-    /**
-    * @method _UnrollIndents
-    * Emits Dedent tokens until the stack matches the target indentation.
-    */
-    _UnrollIndents(_targetIndent) {
-        while (this._indentStack.Length > 1 && this._indentStack[this._indentStack.Length] > _targetIndent) {
-            this._indentStack.Pop()
-            this._pendingTokens.Push({type: "Dedent", value: _targetIndent, line: this._line, column: 1})
-        }
-
-        if (this._indentStack[this._indentStack.Length] != _targetIndent) {
-            throw YamlError("Indentation level mismatch (expected " . this._indentStack[this._indentStack.Length] . " but found " . _targetIndent . ")", this._line, 1)
-        }
+        ; Note: No Indent/Dedent tokens are pushed. 
+        ; Content will be fetched with its physical column.
     }
 
     /**
@@ -466,8 +425,9 @@ class _YamlScanner {
 
             _charAfterIndent := SubStr(this._source, _tempPos, 1)
 
-            ; Check for block end
-            if (_charAfterIndent != "`n" && _currentLineIndent <= this._indentStack[this._indentStack.Length]) {
+            ; Check for block end: if not a newline and indent is 0, it must end.
+            ; For real logic, we'll use _blockIndent established on the first line.
+            if (!_isFirstLine && _charAfterIndent != "`n" && _currentLineIndent < _blockIndent) {
                 break
             }
 
