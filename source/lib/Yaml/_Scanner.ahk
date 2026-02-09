@@ -178,13 +178,6 @@ class _YamlScanner {
             return _token
         }
 
-        ; Mapping Indicator Lookahead
-        if (RegExMatch(SubStr(this._source, this._pos), "^(?<_scalar>(?:[^:#\s\n\[\]{},]|(?<!\s)#)+)(?<_indicator>:\s|:$|:\n|:[\]},])", &_match)) {
-            _token := {type: "Scalar", value: _match._scalar, line: this._line, column: this._column, style: 0}
-            this._Move(StrLen(_match._scalar))
-            return _token
-        }
-
         ; Mapping Indicator ':'
         if (_char == ":" && (this._IsFollowedByWhitespace(this._pos + 1) || InStr("]}", SubStr(this._source, this._pos + 1, 1)))) {
             _token := {type: "MappingIndicator", value: ":", line: this._line, column: this._column}
@@ -193,7 +186,8 @@ class _YamlScanner {
         }
 
         ; Default Plain Scalar
-        if (RegExMatch(SubStr(this._source, this._pos), "^(?:[^:#\s\n\[\]{},]|(?<!\s)#)+", &_match)) {
+        ; Note: It must NOT contain ': ' (Mapping Indicator) or ' #' (Comment)
+        if (RegExMatch(SubStr(this._source, this._pos), "^(?:[^:#\s\n\[\]{},]|:(?!\s|$|[\]},])|(?<!\s)#)+", &_match)) {
             _val := _match[0]
             _token := {type: "Scalar", value: _val, line: this._line, column: this._column, style: 0}
             this._Move(StrLen(_val))
