@@ -142,6 +142,12 @@ class _YamlParser {
     _StateDocumentStart() {
         _token := this._PeekToken()
 
+        ; Skip Directives (%) and DocumentEnd (...) before document starts
+        while (_token.type == "Directive" || _token.type == "DocumentEnd") {
+            this._FetchToken()
+            _token := this._PeekToken()
+        }
+
         if (_token.type == "StreamEnd") {
             this._states.Pop()
             return YamlStreamEndEvent()

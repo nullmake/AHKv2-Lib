@@ -227,7 +227,7 @@ class _YamlScanner {
             }
         }
 
-        ; Check for Document Boundaries (---, ...)
+        ; Check for Document Boundaries (---, ...) or Directives (%)
         if (_currentIndent == 0) {
             _rem := SubStr(this._source, this._pos)
             if (RegExMatch(_rem, "^---(\s|\n|$)")) {
@@ -239,6 +239,12 @@ class _YamlScanner {
                 this._UnrollIndents(0)
                 this._pendingTokens.Push({type: "DocumentEnd", value: "...", line: this._line, column: 1})
                 this._Move(3)
+                return
+            } else if (SubStr(_rem, 1, 1) == "%") {
+                ; Parse directive line
+                RegExMatch(_rem, "^%[^\n]*", &_match)
+                this._pendingTokens.Push({type: "Directive", value: _match[0], line: this._line, column: 1})
+                this._Move(StrLen(_match[0]))
                 return
             }
         }
