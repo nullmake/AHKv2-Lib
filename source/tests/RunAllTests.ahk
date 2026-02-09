@@ -27,6 +27,8 @@
 #Include Yaml/ParserTest.ahk
 #Include Yaml/ConstructorTest.ahk
 #Include Yaml/YamlTest.ahk
+#Include Yaml/EventCanonicalizer.ahk
+#Include Yaml/YamlTestSuiteTest.ahk
 
 ; --- Setup Environment ---
 logDir := (A_Args.Length > 0) ? A_Args[1] : A_ScriptDir . "\logs"
@@ -49,6 +51,7 @@ _runner.Run(ScannerTest())
 _runner.Run(ParserTest())
 _runner.Run(ConstructorTest())
 _runner.Run(YamlTest())
+_runner.Run(YamlTestSuiteTest(_logger))
 
 ; --- Finalize ---
 _runner.PrintFinalSummary()
