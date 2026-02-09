@@ -33,7 +33,7 @@ class _YamlScanner {
     /**
     * @field {Integer} _length - Total length of the source.
     */
-    _length := 0
+    _sourceLength := 0
 
     /**
     * @field {Array} _indentStack - Stack of indentation levels (absolute columns).
@@ -58,13 +58,13 @@ class _YamlScanner {
         ; Normalize line breaks to \n (YAML 1.2.2 - 5.4)
         _source := StrReplace(input, "`r`n", "`n")
         this._source := StrReplace(_source, "`r", "`n")
-        this._length := StrLen(this._source)
+        this._sourceLength := StrLen(this._source)
     }
 
     /**
     * @method FetchToken
     * Advances and returns the next token from the stream.
-    * @returns {Object} Token object {type, value, line, column}
+    * @returns {Object} Token object {type, value, line, column, style}
     */
     FetchToken() {
         ; Return queued tokens first (virtual Indent/Dedent)
@@ -84,7 +84,7 @@ class _YamlScanner {
         this._SkipWhitespaceAndComments()
 
         ; Handle end of stream
-        if (this._pos > this._length) {
+        if (this._pos > this._sourceLength) {
             ; Finalize indentation before ending stream
             if (this._indentStack.Length > 1) {
                 this._UnrollIndents(0)
@@ -159,7 +159,7 @@ class _YamlScanner {
 
         ; Mapping Indicator Lookahead
         if (RegExMatch(SubStr(this._source, this._pos), "^(?<_scalar>(?:[^:#\s\n\[\]{},]|(?<!\s)#)+)(?<_indicator>:\s|:$|:\n|:[\]},])", &_match)) {
-            _token := {type: "Scalar", value: _match._scalar, line: this._line, column: this._column}
+            _token := {type: "Scalar", value: _match._scalar, line: this._line, column: this._column, style: 0}
             this._Move(StrLen(_match._scalar))
             return _token
         }
@@ -174,14 +174,14 @@ class _YamlScanner {
         ; Default Plain Scalar
         if (RegExMatch(SubStr(this._source, this._pos), "^(?:[^:#\s\n\[\]{},]|(?<!\s)#)+", &_match)) {
             _val := _match[0]
-            _token := {type: "Scalar", value: _val, line: this._line, column: this._column}
+            _token := {type: "Scalar", value: _val, line: this._line, column: this._column, style: 0}
             this._Move(StrLen(_val))
             return _token
         }
 
         ; Fallback for any single character
         _val := SubStr(this._source, this._pos, 1)
-        _token := {type: "Scalar", value: _val, line: this._line, column: this._column}
+        _token := {type: "Scalar", value: _val, line: this._line, column: this._column, style: 0}
         this._Move(1)
         return _token
     }
@@ -194,7 +194,7 @@ class _YamlScanner {
         _currentIndent := 0
 
         ; Count leading spaces and check for illegal tabs
-        while (this._pos <= this._length) {
+        while (this._pos <= this._sourceLength) {
             _char := SubStr(this._source, this._pos, 1)
             if (_char == " ") {
                 _currentIndent++
@@ -216,7 +216,7 @@ class _YamlScanner {
 
         ; Skip empty lines or full-line comments
         _nextChar := SubStr(this._source, this._pos, 1)
-        if (this._pos <= this._length && (_nextChar == "`n" || _nextChar == "#")) {
+        if (this._pos <= this._sourceLength && (_nextChar == "`n" || _nextChar == "#")) {
             if (_nextChar == "#") {
                 this._SkipComment()
             }
@@ -266,7 +266,7 @@ class _YamlScanner {
     * @method _SkipWhitespace
     */
     _SkipWhitespace() {
-        while (this._pos <= this._length) {
+        while (this._pos <= this._sourceLength) {
             _char := SubStr(this._source, this._pos, 1)
             if (_char == " ") {
                 this._Move(1)
@@ -280,7 +280,7 @@ class _YamlScanner {
     * @method _SkipComment
     */
     _SkipComment() {
-        while (this._pos <= this._length && SubStr(this._source, this._pos, 1) != "`n") {
+        while (this._pos <= this._sourceLength && SubStr(this._source, this._pos, 1) != "`n") {
             this._Move(1)
         }
     }
@@ -301,12 +301,14 @@ class _YamlScanner {
         this._Move(1) ; Consume opening quote
 
         _val := ""
-        while (this._pos <= this._length) {
+        _style := (quote == "'") ? 1 : 2
+
+        while (this._pos <= this._sourceLength) {
             _char := SubStr(this._source, this._pos, 1)
 
             if (_char == quote) {
                 this._Move(1) ; Consume closing quote
-                return {type: "Scalar", value: _val, line: _startLine, column: _startCol}
+                return {type: "Scalar", value: _val, line: _startLine, column: _startCol, style: _style}
             }
 
             if (_char == "\") {
@@ -348,6 +350,8 @@ class _YamlScanner {
         _startCol := this._column
         this._Move(1) ; Consume '|' or '>'
 
+        _style := (indicator == "|") ? 3 : 4
+
         ; Parse chopping indicator
         _chopping := "clip"
         _next := SubStr(this._source, this._pos, 1)
@@ -361,7 +365,7 @@ class _YamlScanner {
 
         ; Skip trailing space and comment on the indicator line
         this._SkipWhitespaceAndComments()
-        if (this._pos <= this._length && SubStr(this._source, this._pos, 1) == "`n") {
+        if (this._pos <= this._sourceLength && SubStr(this._source, this._pos, 1) == "`n") {
             this._Move(1)
             this._line++
             this._column := 1
@@ -372,10 +376,10 @@ class _YamlScanner {
         _isFirstLine := true
         _lastLineEmpty := false
 
-        while (this._pos <= this._length) {
+        while (this._pos <= this._sourceLength) {
             _currentLineIndent := 0
             _tempPos := this._pos
-            while (_tempPos <= this._length && SubStr(this._source, _tempPos, 1) == " ") {
+            while (_tempPos <= this._sourceLength && SubStr(this._source, _tempPos, 1) == " ") {
                 _currentLineIndent++
                 _tempPos++
             }
@@ -403,7 +407,7 @@ class _YamlScanner {
 
                 this._Move(_blockIndent)
                 _lineText := ""
-                while (this._pos <= this._length && SubStr(this._source, this._pos, 1) != "`n") {
+                while (this._pos <= this._sourceLength && SubStr(this._source, this._pos, 1) != "`n") {
                     _lineText .= SubStr(this._source, this._pos, 1)
                     this._Move(1)
                 }
@@ -415,7 +419,7 @@ class _YamlScanner {
                 _content .= _lineText
                 _lastLineEmpty := false
 
-                if (this._pos <= this._length && SubStr(this._source, this._pos, 1) == "`n") {
+                if (this._pos <= this._sourceLength && SubStr(this._source, this._pos, 1) == "`n") {
                     _content .= "`n"
                     this._Move(1)
                 }
@@ -434,14 +438,14 @@ class _YamlScanner {
         }
 
         this._isAtLineStart := true
-        return {type: "Scalar", value: _content, line: _startLine, column: _startCol}
+        return {type: "Scalar", value: _content, line: _startLine, column: _startCol, style: _style}
     }
 
     /**
     * @method _IsFollowedByWhitespace
     */
     _IsFollowedByWhitespace(pos) {
-        if (pos > this._length) {
+        if (pos > this._sourceLength) {
             return true
         }
         _next := SubStr(this._source, pos, 1)

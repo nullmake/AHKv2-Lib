@@ -226,7 +226,7 @@ class _YamlParser {
             this._pendingTag := ""
             this._FetchToken()
             this._states.Pop()
-            return YamlScalarEvent(_token.value, _tag, _anchor, 0, _token.line, _token.column)
+            return YamlScalarEvent(_token.value, _tag, _anchor, _token.style, _token.line, _token.column)
         }
 
         ; Handle empty values or end of structures
@@ -326,7 +326,7 @@ class _YamlParser {
         this._states.Push("_StateBlockMappingKey")
         this._states.Push("_StateBlockNode")
 
-        return YamlScalarEvent(_keyToken.value, "", "", 0, _keyToken.line, _keyToken.column)
+        return YamlScalarEvent(_keyToken.value, "", "", _keyToken.style, _keyToken.line, _keyToken.column)
     }
 
     /**
@@ -405,7 +405,7 @@ class _YamlParser {
                 this._states.Pop()
                 this._states.Push("_StateFlowMappingKey")
                 this._states.Push("_StateBlockNode")
-                return YamlScalarEvent(_keyToken.value, "", "", 0, _keyToken.line, _keyToken.column)
+                return YamlScalarEvent(_keyToken.value, "", "", _keyToken.style, _keyToken.line, _keyToken.column)
             }
         }
 

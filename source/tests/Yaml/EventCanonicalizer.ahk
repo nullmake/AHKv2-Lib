@@ -64,7 +64,7 @@ class EventCanonicalizer {
             _props .= " &" . event.anchor
         }
         if (event.tag != "") {
-            _props .= " <" . event.tag . ">"
+            _props .= " <" . this._NormalizeTag(event.tag) . ">"
         }
 
         _style := (event.style == 1) ? "'" ; Single Quoted
@@ -87,10 +87,33 @@ class EventCanonicalizer {
             _props .= " &" . event.anchor
         }
         if (event.tag != "") {
-            _props .= " <" . event.tag . ">"
+            _props .= " <" . this._NormalizeTag(event.tag) . ">"
         }
         _flow := event.flowStyle ? (prefix == "+SEQ" ? " []" : " {}") : ""
         return prefix . _props . _flow
+    }
+
+    /**
+    * @method _NormalizeTag
+    * Expands shorthand tags like !!str to full URIs for YAML Test Suite compliance.
+    * @private
+    */
+    static _NormalizeTag(tag) {
+        static _shorthands := Map(
+            "!!str", "tag:yaml.org,2002:str",
+            "!!int", "tag:yaml.org,2002:int",
+            "!!float", "tag:yaml.org,2002:float",
+            "!!bool", "tag:yaml.org,2002:bool",
+            "!!null", "tag:yaml.org,2002:null",
+            "!!map", "tag:yaml.org,2002:map",
+            "!!seq", "tag:yaml.org,2002:seq",
+            "!!binary", "tag:yaml.org,2002:binary",
+            "!!timestamp", "tag:yaml.org,2002:timestamp",
+            "!!set", "tag:yaml.org,2002:set",
+            "!!omap", "tag:yaml.org,2002:omap",
+            "!!pairs", "tag:yaml.org,2002:pairs"
+        )
+        return _shorthands.Has(tag) ? _shorthands[tag] : tag
     }
 
     /**
