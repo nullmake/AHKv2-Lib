@@ -45,9 +45,9 @@ class _YamlParser {
     _loopDetector := 0
 
     /**
-    * @field {Object} _pendingDocumentStart - Buffered DocumentStartEvent.
+    * @field {Array} _blockIndents - Stack of active block indentation columns.
     */
-    _pendingDocumentStart := ""
+    _blockIndents := [-1]
 
     /**
     * @constructor
@@ -68,14 +68,6 @@ class _YamlParser {
         loop {
             if (this._states.Length == 0) {
                 return ""
-            }
-
-            ; Return pending DocumentStart if it exists
-            if (this._pendingDocumentStart) {
-                _event := this._pendingDocumentStart
-                this._pendingDocumentStart := ""
-                this._loopDetector := 0
-                return _event
             }
 
             ; Safety: Prevent infinite loops without progress
@@ -225,6 +217,8 @@ class _YamlParser {
             this._states.Pop()
             this._states.Push("_StateBlockSequenceEnd")
             this._states.Push("_StateBlockSequenceEntry")
+            
+            this._blockIndents.Push(_token.column)
             return YamlSequenceStartEvent(_tag, _anchor, false, _token.line, _token.column)
         }
 
@@ -264,6 +258,8 @@ class _YamlParser {
                 this._states.Pop()
                 this._states.Push("_StateBlockMappingEnd")
                 this._states.Push("_StateBlockMappingKey")
+                
+                this._blockIndents.Push(_token.column)
                 return YamlMappingStartEvent(_tag, _anchor, false, _token.line, _token.column)
             }
 
@@ -312,6 +308,8 @@ class _YamlParser {
             this._states.Push("_StateBlockSequenceNext")
             this._states.Push("_StateBlockMappingEnd")
             this._states.Push("_StateBlockMappingKey")
+            
+            this._blockIndents.Push(_token.column)
             return YamlMappingStartEvent("", "", false, _token.line, _token.column)
         }
 
@@ -328,6 +326,12 @@ class _YamlParser {
     */
     _StateBlockSequenceNext() {
         _token := this._PeekToken()
+
+        ; Implicit termination: if next token is to the left of the current sequence
+        if (_token.column < this._blockIndents[this._blockIndents.Length]) {
+            this._states.Pop()
+            return "" ; Proceed to BlockSequenceEnd via loop
+        }
 
         if (_token.type == "SequenceIndicator") {
             this._states.Pop()
@@ -352,6 +356,7 @@ class _YamlParser {
     */
     _StateBlockSequenceEnd() {
         this._states.Pop()
+        this._blockIndents.Pop()
         return YamlSequenceEndEvent()
     }
 
@@ -361,6 +366,12 @@ class _YamlParser {
     */
     _StateBlockMappingKey() {
         _token := this._PeekToken()
+
+        ; Implicit termination: if next token is to the left of the current mapping
+        if (_token.column < this._blockIndents[this._blockIndents.Length]) {
+            this._states.Pop()
+            return "" ; Proceed to BlockMappingEnd via loop
+        }
 
         if (_token.type == "Dedent" || _token.type == "StreamEnd" || _token.type == "DocumentStart" || _token.type == "DocumentEnd") {
             if (_token.type == "Dedent") {
@@ -433,6 +444,7 @@ class _YamlParser {
     */
     _StateBlockMappingEnd() {
         this._states.Pop()
+        this._blockIndents.Pop()
         return YamlMappingEndEvent()
     }
 
