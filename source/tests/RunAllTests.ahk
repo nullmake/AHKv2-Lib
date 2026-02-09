@@ -1,6 +1,7 @@
 #Requires AutoHotkey v2.0
 ; --- Library Includes ---
 #Include ../lib/Logger.ahk
+#Include ../lib/TestLogger.ahk
 #Include ../lib/ServiceLocator.ahk
 #Include ../lib/Assert.ahk
 #Include ../lib/Ime.ahk
@@ -36,7 +37,8 @@ if (!DirExist(logDir)) {
     DirCreate(logDir)
 }
 
-_logger := Logger(logDir, 1000, 10)
+; Use TestLogger for unit tests to see immediate output in console
+_logger := TestLogger(logDir)
 ServiceLocator.Register("Logger", _logger)
 _runner := TestRunner(_logger)
 

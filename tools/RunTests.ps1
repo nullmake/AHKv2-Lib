@@ -13,7 +13,7 @@ if ([System.IO.Directory]::Exists($LogDir)) {
     [System.IO.Directory]::CreateDirectory($LogDir) | Out-Null
 }
 
-Write-Host ">>> Starting Unit Tests..." -ForegroundColor Cyan
+Write-Host ">>> Starting Unit Tests (Real-time mode)..." -ForegroundColor Cyan
 
 # 2. Find AutoHotkey v2
 $ahkExe = ""
@@ -46,33 +46,52 @@ if ($ahkExe -eq "") {
     exit 1
 }
 
-# 3. Run AHK v2 script
-# Use call operator (&) and 2>&1 to capture stdout and stderr.
-# Piping to Out-String forces PowerShell to wait for the GUI process to finish.
-Push-Location $TestDir
-$ahkOutput = & $ahkExe /ErrorStdOut "$TestScript" "$LogDir" 2>&1 | Out-String
-$exitCode = $LASTEXITCODE
-Pop-Location
+# 3. Run AHK v2 script with real-time output
+# We use Start-Process with redirection to capture stdout/stderr stream by stream
+$psi = New-Object System.Diagnostics.ProcessStartInfo
+$psi.FileName = $ahkExe
+$psi.Arguments = "/ErrorStdOut `"$TestScript`" `"$LogDir`""
+$psi.WorkingDirectory = $TestDir
+$psi.UseShellExecute = $false
+$psi.RedirectStandardOutput = $true
+$psi.RedirectStandardError = $true
+$psi.StandardOutputEncoding = [System.Text.Encoding]::UTF8
+
+$process = New-Object System.Diagnostics.Process
+$process.StartInfo = $psi
+
+# Real-time event handling
+$outputAction = {
+    if ($EventArgs.Data) {
+        Write-Host $EventArgs.Data
+    }
+}
+
+$errorAction = {
+    if ($EventArgs.Data) {
+        Write-Host $EventArgs.Data -ForegroundColor Yellow
+    }
+}
+
+Register-ObjectEvent -InputObject $process -EventName "OutputDataReceived" -Action $outputAction | Out-Null
+Register-ObjectEvent -InputObject $process -EventName "ErrorDataReceived" -Action $errorAction | Out-Null
+
+$process.Start() | Out-Null
+$process.BeginOutputReadLine()
+$process.BeginErrorReadLine()
+
+# Wait for process to exit
+while (!$process.HasExited) {
+    Start-Sleep -Milliseconds 100
+}
+
+$exitCode = $process.ExitCode
 
 # 4. Report Results
 if ($exitCode -ne 0) {
-    Write-Host "!!! Tests Failed (ExitCode: $exitCode)" -ForegroundColor Red
-    if ($ahkOutput) {
-        Write-Host "`n--- AutoHotkey Output/Errors ---" -ForegroundColor Yellow
-        $ahkOutput | Out-String | Write-Host
-    }
+    Write-Host "`n!!! Tests Failed (ExitCode: $exitCode)" -ForegroundColor Red
 } else {
-    Write-Host "+++ All Tests Passed!" -ForegroundColor Green
-}
-
-# 5. Display the latest log if exists
-if ([System.IO.Directory]::Exists($LogDir)) {
-    $files = [System.IO.Directory]::GetFiles($LogDir, "*.log")
-    if ($files.Count -gt 0) {
-        $latestLog = $files | Sort-Object { [System.IO.File]::GetLastWriteTime($_) } -Descending | Select-Object -First 1
-        Write-Host "`n--- Test Log Summary ---" -ForegroundColor Gray
-        Get-Content $latestLog | Select-Object -Last 20
-    }
+    Write-Host "`n+++ All Tests Passed!" -ForegroundColor Green
 }
 
 exit $exitCode
