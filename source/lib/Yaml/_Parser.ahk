@@ -45,6 +45,11 @@ class _YamlParser {
     _loopDetector := 0
 
     /**
+    * @field {Object} _pendingDocumentStart - Buffered DocumentStartEvent.
+    */
+    _pendingDocumentStart := ""
+
+    /**
     * @constructor
     * @param {Object} scanner - An instance of _YamlScanner.
     */
@@ -62,6 +67,13 @@ class _YamlParser {
     NextEvent() {
         if (this._states.Length == 0) {
             return ""
+        }
+
+        ; Return pending DocumentStart if it exists
+        if (this._pendingDocumentStart) {
+            _event := this._pendingDocumentStart
+            this._pendingDocumentStart := ""
+            return _event
         }
 
         ; Safety: Prevent infinite loops without progress
@@ -135,7 +147,8 @@ class _YamlParser {
         this._states.Push("_StateDocumentEnd")
         this._states.Push("_StateBlockNode")
 
-        return YamlDocumentStartEvent(_explicit, _token.line, _token.column)
+        this._pendingDocumentStart := YamlDocumentStartEvent(_explicit, _token.line, _token.column)
+        return this.NextEvent()
     }
 
     /**
@@ -296,7 +309,7 @@ class _YamlParser {
             return this.NextEvent()
         }
 
-        if (_token.type == "Dedent" || _token.type == "StreamEnd" || _token.type == "DocumentStart") {
+        if (_token.type == "Dedent" || _token.type == "StreamEnd" || _token.type == "DocumentStart" || _token.type == "DocumentEnd") {
             if (_token.type == "Dedent") {
                 this._FetchToken()
             }
@@ -323,7 +336,7 @@ class _YamlParser {
     _StateBlockMappingKey() {
         _token := this._PeekToken()
 
-        if (_token.type == "Dedent" || _token.type == "StreamEnd" || _token.type == "DocumentStart") {
+        if (_token.type == "Dedent" || _token.type == "StreamEnd" || _token.type == "DocumentStart" || _token.type == "DocumentEnd") {
             if (_token.type == "Dedent") {
                 this._FetchToken()
             }
