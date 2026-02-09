@@ -290,11 +290,6 @@ class _YamlParser {
             this._pendingTag := ""
             this._states.Pop()
 
-            ; If DocumentStart is still pending, emit it before the scalar
-            if (this._pendingDocumentStart) {
-                return ""
-            }
-
             ; Implicit null scalar
             return YamlScalarEvent("", _tag, _anchor, 0, _token.line, _token.column)
         }
@@ -308,6 +303,17 @@ class _YamlParser {
     */
     _StateBlockSequenceEntry() {
         this._FetchToken() ; Consumes '-'
+
+        _token := this._PeekToken()
+        
+        ; If the entry is a mapping (e.g., "- key: value"), start the mapping immediately
+        if (_token.type == "Scalar" && this._PeekToken(2).type == "MappingIndicator") {
+            this._states.Pop()
+            this._states.Push("_StateBlockSequenceNext")
+            this._states.Push("_StateBlockMappingEnd")
+            this._states.Push("_StateBlockMappingKey")
+            return YamlMappingStartEvent("", "", false, 0, _token.line, _token.column)
+        }
 
         this._states.Pop()
         this._states.Push("_StateBlockSequenceNext")
