@@ -143,9 +143,17 @@ class _YamlParser {
     * Emits DocumentEnd and returns to DocumentStart.
     */
     _StateDocumentEnd() {
+        _token := this._PeekToken()
+        _explicit := false
+
+        if (_token.type == "DocumentEnd") {
+            this._FetchToken()
+            _explicit := true
+        }
+
         this._states.Pop()
         this._states.Push("_StateDocumentStart")
-        return YamlDocumentEndEvent(false)
+        return YamlDocumentEndEvent(_explicit)
     }
 
     /**
@@ -241,13 +249,20 @@ class _YamlParser {
             return YamlScalarEvent(_token.value, _tag, _anchor, _token.style, _token.line, _token.column)
         }
 
-        ; Handle empty values or end of structures
-        if (_token.type == "Dedent" || _token.type == "StreamEnd" || _token.type == "DocumentStart") {
+        ; Handle end of structures or document boundaries
+        if (_token.type == "Dedent" || _token.type == "StreamEnd" || _token.type == "DocumentStart" || _token.type == "DocumentEnd") {
+            if (_token.type == "Dedent") {
+                this._FetchToken()
+                return this.NextEvent()
+            }
+
             _anchor := this._pendingAnchor
             _tag := this._pendingTag
             this._pendingAnchor := ""
             this._pendingTag := ""
             this._states.Pop()
+
+            ; Implicit null scalar
             return YamlScalarEvent("", _tag, _anchor, 0, _token.line, _token.column)
         }
 

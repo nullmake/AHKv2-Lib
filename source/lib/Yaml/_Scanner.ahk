@@ -227,12 +227,20 @@ class _YamlScanner {
             }
         }
 
-        ; Check for Document Boundary (---)
-        if (_currentIndent == 0 && RegExMatch(SubStr(this._source, this._pos), "^---(\s|\n|$)")) {
-            this._UnrollIndents(0)
-            this._pendingTokens.Push({type: "DocumentStart", value: "---", line: this._line, column: 1})
-            this._Move(3)
-            return
+        ; Check for Document Boundaries (---, ...)
+        if (_currentIndent == 0) {
+            _rem := SubStr(this._source, this._pos)
+            if (RegExMatch(_rem, "^---(\s|\n|$)")) {
+                this._UnrollIndents(0)
+                this._pendingTokens.Push({type: "DocumentStart", value: "---", line: this._line, column: 1})
+                this._Move(3)
+                return
+            } else if (RegExMatch(_rem, "^\.\.\.(\s|\n|$)")) {
+                this._UnrollIndents(0)
+                this._pendingTokens.Push({type: "DocumentEnd", value: "...", line: this._line, column: 1})
+                this._Move(3)
+                return
+            }
         }
 
         ; Skip empty lines or full-line comments
