@@ -115,6 +115,17 @@ class _YamlParser {
     }
 
     /**
+    * @method _EmitPendingStart
+    * Emits buffered DocumentStartEvent if it exists.
+    */
+    _EmitPendingStart() {
+        if (this._pendingDocumentStart) {
+            return this.NextEvent()
+        }
+        return this.NextEvent()
+    }
+
+    /**
     * @method _StateStreamStart
     * Initial state: emits StreamStart.
     */
@@ -148,7 +159,7 @@ class _YamlParser {
         this._states.Push("_StateBlockNode")
 
         this._pendingDocumentStart := YamlDocumentStartEvent(_explicit, _token.line, _token.column)
-        return this.NextEvent()
+        return this._EmitPendingStart()
     }
 
     /**
@@ -274,6 +285,11 @@ class _YamlParser {
             this._pendingAnchor := ""
             this._pendingTag := ""
             this._states.Pop()
+
+            ; If DocumentStart is still pending, emit it before the scalar
+            if (this._pendingDocumentStart) {
+                return this.NextEvent()
+            }
 
             ; Implicit null scalar
             return YamlScalarEvent("", _tag, _anchor, 0, _token.line, _token.column)
