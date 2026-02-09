@@ -359,8 +359,11 @@ class _YamlScanner {
             }
 
             if (_char == "`n") {
+                this._Move(1)
                 this._line++
                 this._column := 1
+                _val .= "`n"
+                continue
             }
 
             _val .= _char

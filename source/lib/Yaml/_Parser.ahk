@@ -372,6 +372,15 @@ class _YamlParser {
             return this.NextEvent()
         }
 
+        if (_token.type == "MappingIndicator") {
+            ; Empty key case
+            this._states.Pop()
+            this._states.Push("_StateBlockMappingValue")
+
+            ; Implicit empty scalar for the key
+            return YamlScalarEvent("", "", "", 0, _token.line, _token.column)
+        }
+
         throw YamlError("Expected mapping key or dedent, but found " . _token.type, _token.line, _token.column)
     }
 
