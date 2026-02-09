@@ -197,10 +197,47 @@ class _YamlScanner {
         ; And it can contain spaces as long as they are not trailing and not followed by #
         _plainRegex := "^(?:[^:#\s\n\[\]{},]|:(?!\s|$|[\]},])|(?<!\s)#)(?:[^:#\n\[\]{},]|:(?!\s|$|[\]},])|(?<!\s)#| (?!#))*"
         if (RegExMatch(SubStr(this._source, this._pos), _plainRegex, &_match)) {
+            _startLine := this._line
+            _startCol := this._column
             _val := RTrim(_match[0])
-            _token := {type: "Scalar", value: _val, line: this._line, column: this._column, style: 0}
             this._Move(StrLen(_match[0]))
-            return _token
+
+            ; Multi-line folding logic
+            loop {
+                _savedPos := this._pos
+                _savedLine := this._line
+                _savedCol := this._column
+
+                ; Check for newline and potential continuation
+                if (this._pos <= this._sourceLength && SubStr(this._source, this._pos, 1) == "`n") {
+                    this._Move(1)
+
+                    ; Count indentation on next line
+                    _nextIndent := 0
+                    while (this._pos <= this._sourceLength && SubStr(this._source, this._pos, 1) == " ") {
+                        _nextIndent++
+                        this._Move(1)
+                    }
+
+                    ; A plain scalar continues if it's indented more than the current block
+                    _currentBlockIndent := this._indentStack[this._indentStack.Length]
+                    if (_nextIndent > _currentBlockIndent) {
+                        if (RegExMatch(SubStr(this._source, this._pos), _plainRegex, &_nextMatch)) {
+                            _val .= " " . RTrim(_nextMatch[0])
+                            this._Move(StrLen(_nextMatch[0]))
+                            continue
+                        }
+                    }
+                }
+
+                ; If not a continuation, backtrack
+                this._pos := _savedPos
+                this._line := _savedLine
+                this._column := _savedCol
+                break
+            }
+
+            return {type: "Scalar", value: _val, line: _startLine, column: _startCol, style: 0}
         }
 
         ; Fallback for any single character
