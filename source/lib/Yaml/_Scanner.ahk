@@ -194,10 +194,12 @@ class _YamlScanner {
 
         ; Default Plain Scalar
         ; Note: It must NOT contain ': ' (Mapping Indicator) or ' #' (Comment)
-        if (RegExMatch(SubStr(this._source, this._pos), "^(?:[^:#\s\n\[\]{},]|:(?!\s|$|[\]},])|(?<!\s)#)+", &_match)) {
-            _val := _match[0]
+        ; And it can contain spaces as long as they are not trailing and not followed by #
+        _plainRegex := "^(?:[^:#\s\n\[\]{},]|:(?!\s|$|[\]},])|(?<!\s)#)(?:[^:#\n\[\]{},]|:(?!\s|$|[\]},])|(?<!\s)#| (?!#))*"
+        if (RegExMatch(SubStr(this._source, this._pos), _plainRegex, &_match)) {
+            _val := RTrim(_match[0])
             _token := {type: "Scalar", value: _val, line: this._line, column: this._column, style: 0}
-            this._Move(StrLen(_val))
+            this._Move(StrLen(_match[0]))
             return _token
         }
 
