@@ -54,7 +54,8 @@ class TestRunner {
         failCount := 0
 
         ; Inspect the base (prototype) of the instance to find defined methods
-        for propName in testSuite.Base.OwnProps() {
+        for propName in this._GetTestMethod(testSuite) {
+            OutputDebug(propName)
             if (SubStr(propName, 1, 5) == "Test_") {
                 this.log.Info("  Running: " . propName)
 
@@ -89,6 +90,21 @@ class TestRunner {
         return (failCount == 0)
     }
 
+    _GetTestMethod(testSuite) {
+        propNames := []
+        if (testSuite.HasProp("Base") && testSuite.Base.__Class != "Object") {
+            for propName in this._GetTestMethod(testSuite.Base) {
+                propNames.Push(propName)
+            }
+        }
+        for propName in testSuite.Base.OwnProps() {
+            if (SubStr(propName, 1, 5) == "Test_") {
+                propNames.Push(propName)
+            }
+        }
+        return propNames
+    }
+
     /**
      * Method: PrintFinalSummary
      * Logs a formatted summary of all executed test suites.
@@ -107,7 +123,7 @@ class TestRunner {
             line := Format("{1:-7s} {2:-25s} (Pass: {3}, Fail: {4})",
                 status, result.Name, result.Pass, result.Fail)
             this.log.Info(line)
-            
+
             totalPass += result.Pass
             totalFail += result.Fail
         }

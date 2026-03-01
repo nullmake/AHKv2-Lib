@@ -11,9 +11,9 @@ class LoggerTest {
     logger := ""
 
     /**
-     * @method Setup
-     * Create a clean temporary directory for each test.
-     */
+    * @method Setup
+    * Create a clean temporary directory for each test.
+    */
     Setup() {
         if (DirExist(this.testDir)) {
             DirDelete(this.testDir, true)
@@ -24,8 +24,8 @@ class LoggerTest {
     }
 
     /**
-     * @method Test_Buffer_ShouldRespectMaxEntries
-     */
+    * @method Test_Buffer_ShouldRespectMaxEntries
+    */
     Test_Buffer_ShouldRespectMaxEntries() {
         loop 10 {
             this.logger.Info("Message " . A_Index)
@@ -36,8 +36,8 @@ class LoggerTest {
     }
 
     /**
-     * @method Test_Rotation_ShouldRespectMaxFiles
-     */
+    * @method Test_Rotation_ShouldRespectMaxFiles
+    */
     Test_Rotation_ShouldRespectMaxFiles() {
         ; 1. Create 5 flushes (exceeding maxFiles: 3)
         loop 5 {
@@ -56,9 +56,9 @@ class LoggerTest {
     }
 
     /**
-     * @method Teardown
-     * Cleanup the temporary directory.
-     */
+    * @method Teardown
+    * Cleanup the temporary directory.
+    */
     Teardown() {
         this.logger := ""
         if (DirExist(this.testDir)) {

@@ -1,10 +1,25 @@
 # RunTests.ps1
 # Specialized test runner for AHKv2-Lib
 
+param(
+    [string]$TargetScript = "RunAllTests.ahk"
+)
+
 $ProjectRoot = [System.IO.Path]::GetFullPath("$PSScriptRoot\..")
 $TestDir = [System.IO.Path]::Combine($ProjectRoot, "source", "tests")
 $LogDir = [System.IO.Path]::Combine($TestDir, "logs")
-$TestScript = [System.IO.Path]::Combine($TestDir, "RunAllTests.ahk")
+
+# Resolve absolute path for the target script
+if ([System.IO.Path]::IsPathRooted($TargetScript)) {
+    $TestScript = $TargetScript
+} else {
+    $TestScript = [System.IO.Path]::GetFullPath([System.IO.Path]::Combine($TestDir, $TargetScript))
+}
+
+if (!(Test-Path $TestScript)) {
+    # Try relative to CWD if not found in test dir
+    $TestScript = [System.IO.Path]::GetFullPath($TargetScript)
+}
 
 # 1. Cleanup old logs
 if ([System.IO.Directory]::Exists($LogDir)) {
@@ -13,7 +28,7 @@ if ([System.IO.Directory]::Exists($LogDir)) {
     [System.IO.Directory]::CreateDirectory($LogDir) | Out-Null
 }
 
-Write-Host ">>> Starting Unit Tests..." -ForegroundColor Cyan
+Write-Host ">>> Executing: $TestScript" -ForegroundColor Cyan
 
 # 2. Find AutoHotkey v2
 $ahkExe = ""
@@ -46,25 +61,52 @@ if ($ahkExe -eq "") {
     exit 1
 }
 
-# 3. Run AHK v2 script
-$process = Start-Process -FilePath $ahkExe -ArgumentList "/ErrorStdOut", "`"$TestScript`"", "`"$LogDir`"" -WorkingDirectory $TestDir -Wait -PassThru -NoNewWindow
+# 3. Run AHK v2 script with real-time output
+# We use Start-Process with redirection to capture stdout/stderr stream by stream
+$psi = New-Object System.Diagnostics.ProcessStartInfo
+$psi.FileName = $ahkExe
+$psi.Arguments = "/ErrorStdOut `"$TestScript`" `"$LogDir`""
+$psi.WorkingDirectory = $TestDir
+$psi.UseShellExecute = $false
+$psi.RedirectStandardOutput = $true
+$psi.RedirectStandardError = $true
+$psi.StandardOutputEncoding = [System.Text.Encoding]::UTF8
 
-# 4. Report Results
-if ($null -eq $process -or $process.ExitCode -ne 0) {
-    $exitCode = if ($null -eq $process) { 1 } else { $process.ExitCode }
-    Write-Host "!!! Tests Failed (ExitCode: $exitCode)" -ForegroundColor Red
-} else {
-    Write-Host "+++ All Tests Passed!" -ForegroundColor Green
-}
+$process = New-Object System.Diagnostics.Process
+$process.StartInfo = $psi
 
-# 5. Display the latest log if exists
-if ([System.IO.Directory]::Exists($LogDir)) {
-    $files = [System.IO.Directory]::GetFiles($LogDir, "*.log")
-    if ($files.Count -gt 0) {
-        $latestLog = $files | Sort-Object { [System.IO.File]::GetLastWriteTime($_) } -Descending | Select-Object -First 1
-        Write-Host "`n--- Test Log Summary ---" -ForegroundColor Gray
-        Get-Content $latestLog | Select-Object -Last 20
+# Real-time event handling
+$outputAction = {
+    if ($EventArgs.Data) {
+        Write-Host $EventArgs.Data
     }
 }
 
-if ($null -eq $process) { exit 1 } else { exit $process.ExitCode }
+$errorAction = {
+    if ($EventArgs.Data) {
+        Write-Host $EventArgs.Data -ForegroundColor Yellow
+    }
+}
+
+Register-ObjectEvent -InputObject $process -EventName "OutputDataReceived" -Action $outputAction | Out-Null
+Register-ObjectEvent -InputObject $process -EventName "ErrorDataReceived" -Action $errorAction | Out-Null
+
+$process.Start() | Out-Null
+$process.BeginOutputReadLine()
+$process.BeginErrorReadLine()
+
+# Wait for process to exit
+while (!$process.HasExited) {
+    Start-Sleep -Milliseconds 100
+}
+
+$exitCode = $process.ExitCode
+
+# 4. Report Results
+if ($exitCode -ne 0) {
+    Write-Host "`n!!! Tests Failed (ExitCode: $exitCode)" -ForegroundColor Red
+} else {
+    Write-Host "`n+++ All Tests Finished!" -ForegroundColor Green
+}
+
+exit $exitCode

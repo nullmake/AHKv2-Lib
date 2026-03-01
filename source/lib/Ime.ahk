@@ -55,7 +55,8 @@ class Ime {
 
             ; Use DllCall to bypass AHK's window matching logic and DetectHiddenWindows setting.
             ; This directly uses the HWND to send the WM_IME_CONTROL message.
-            return DllCall("user32\SendMessage", "Ptr", defaultImeWnd, "UInt", Ime.WM_IME_CONTROL, "Ptr", Ime.IMC_GETOPENSTATUS, "Ptr", 0, "Ptr")
+            return DllCall("user32\SendMessage", "Ptr", defaultImeWnd, "UInt", Ime.WM_IME_CONTROL, "Ptr", Ime.IMC_GETOPENSTATUS,
+                "Ptr", 0, "Ptr")
         } catch Any as e {
             OutputDebug("Error getting IME status: " . e.Message)
             return 0
@@ -83,7 +84,8 @@ class Ime {
 
             ; Use DllCall to bypass AHK's window matching logic and DetectHiddenWindows setting.
             ; This directly uses the HWND to send the WM_IME_CONTROL message with IMC_SETOPENSTATUS.
-            DllCall("user32\SendMessage", "Ptr", defaultImeWnd, "UInt", Ime.WM_IME_CONTROL, "Ptr", Ime.IMC_SETOPENSTATUS, "Ptr", setStatus, "Ptr")
+            DllCall("user32\SendMessage", "Ptr", defaultImeWnd, "UInt", Ime.WM_IME_CONTROL, "Ptr", Ime.IMC_SETOPENSTATUS,
+                "Ptr", setStatus, "Ptr")
         } catch Any as e {
             OutputDebug("Error setting IME status: " . e.Message)
         }

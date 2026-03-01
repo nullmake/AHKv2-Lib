@@ -1,11 +1,13 @@
 #Requires AutoHotkey v2.0
 #Include ../lib/Logger.ahk
-#Include ../lib/ServiceLocator.ahk
-#Include ../lib/Assert.ahk
-#Include ../lib/Ime.ahk
-#Include ../lib/KeyEvent.ahk
-#Include ../lib/Window.ahk
+#Include ../lib/TestLogger.ahk
 #Include ../lib/TestRunner.ahk
+#Include ../lib/Assert.ahk
+#Include ../lib/ServiceLocator.ahk
+#Include ../lib/Window.ahk
+#Include ../lib/KeyEvent.ahk
+#Include ../lib/Ime.ahk
+#Include ../lib/Yaml/Yaml.ahk
 
 #Include AssertTest.ahk
 #Include ImeTest.ahk
@@ -14,41 +16,34 @@
 #Include ServiceLocatorTest.ahk
 #Include WindowTest.ahk
 
-; Set up environment
-; Allow log directory to be specified via command line argument
-logDir := (A_Args.Length > 0) ? A_Args[1] : A_ScriptDir . "\logs"
+#Include Yaml/EventCanonicalizer.ahk
+#Include Yaml/JsonStringifier.ahk
+#include Yaml/YamlTestOptions.ahk
+#Include Yaml/YamlTestSuiteTestBase.ahk
+#include yaml/YamlConstructorTest.ahk
+#include yaml/YamlDumpTest.ahk
+#include yaml/YamlLayoutProcessorTest.ahk
+#include yaml/YamlParserTest.ahk
+#include yaml/YamlRawScannerTest.ahk
 
-if (!DirExist(logDir)) {
-    DirCreate(logDir)
-}
-
-; Initialize Logger
-_logger := Logger(logDir, 1000, 10)
-ServiceLocator.Register("Logger", _logger)
-
-; Initialize Runner
+_logger := TestLogger(A_ScriptDir "\logs")
 _runner := TestRunner(_logger)
 
-; Run Suites
-_runner.Run(AssertTest())
-_runner.Run(ImeTest())
-_runner.Run(KeyEventTest())
-_runner.Run(LoggerTest())
-_runner.Run(ServiceLocatorTest())
-_runner.Run(WindowTest())
+_logger.Info("=== Test Execution Started ===")
 
-; Summary
+try {
+    _runner.Run(AssertTest())
+    _runner.Run(ImeTest())
+    _runner.Run(KeyEventTest())
+    _runner.Run(LoggerTest())
+    _runner.Run(ServiceLocatorTest())
+    _runner.Run(WindowTest())
+    _runner.Run(YamlParserTest(_logger))
+    _runner.Run(YamlConstructorTest(_logger))
+    _runner.Run(YamlDumpTest(_logger))
+}
+catch Any as _e {
+    _logger.Error("Critical error during test run: " . _e.Message)
+}
+
 _runner.PrintFinalSummary()
-_logger.Flush("TEST")
-
-; Exit with code based on results
-totalFail := 0
-for result in _runner.suiteResults {
-    totalFail += result.Fail
-}
-
-if (totalFail > 0) {
-    ExitApp(1)
-} else {
-    ExitApp(0)
-}

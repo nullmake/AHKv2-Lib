@@ -7,8 +7,22 @@
     {
       "type": "ahk2",
       "request": "launch",
-      "name": "Unit Test",
+      "name": "Run active Tab",
+      "program": "${file}",
+      "stopOnEntry": true
+    },
+    {
+      "type": "ahk2",
+      "request": "launch",
+      "name": "Run All Test",
       "program": "${workspaceFolder}/source/tests/RunAllTests.ahk",
+      "stopOnEntry": true
+    },
+    {
+      "type": "ahk2",
+      "request": "launch",
+      "name": "YAML Test Suite",
+      "program": "${workspaceFolder}/source/tests/RunYamlTestSuite.ahk",
       "stopOnEntry": true
     }
   ]

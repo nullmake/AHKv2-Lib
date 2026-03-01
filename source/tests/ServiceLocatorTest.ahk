@@ -6,38 +6,38 @@
  */
 class ServiceLocatorTest {
     /**
-     * @method Setup
-     * Ensures a clean state before each test.
-     */
+    * @method Setup
+    * Ensures a clean state before each test.
+    */
     Setup() {
         ServiceLocator.Reset()
     }
 
     /**
-     * @method Test_RegisterAndGet_ShouldWorkCorrectly
-     */
+    * @method Test_RegisterAndGet_ShouldWorkCorrectly
+    */
     Test_RegisterAndGet_ShouldWorkCorrectly() {
         mockService := { Data: "Hello" }
         ServiceLocator.Register("TestSvc", mockService)
-        
+
         result := ServiceLocator.Get("TestSvc")
         Assert.Equal(mockService, result, "Should retrieve the same instance that was registered.")
     }
 
     /**
-     * @method Test_DynamicPropertyAccess_ShouldWorkCorrectly
-     */
+    * @method Test_DynamicPropertyAccess_ShouldWorkCorrectly
+    */
     Test_DynamicPropertyAccess_ShouldWorkCorrectly() {
         mockService := { Value: 123 }
         ServiceLocator.Register("MySvc", mockService)
-        
+
         ; Test dynamic property access (shortcut)
         Assert.Equal(123, ServiceLocator.MySvc.Value, "Should allow access via dynamic property.")
     }
 
     /**
-     * @method Test_GetUnregistered_ShouldThrowError
-     */
+    * @method Test_GetUnregistered_ShouldThrowError
+    */
     Test_GetUnregistered_ShouldThrowError() {
         try {
             ServiceLocator.Get("NonExistent")
@@ -48,14 +48,14 @@ class ServiceLocatorTest {
     }
 
     /**
-     * @method Test_Reset_ShouldClearAllServices
-     */
+    * @method Test_Reset_ShouldClearAllServices
+    */
     Test_Reset_ShouldClearAllServices() {
         ServiceLocator.Register("Temp", {})
         ServiceLocator.Reset()
-        
+
         Assert.False(ServiceLocator.HasProp("Temp"), "Dynamic property should be removed after Reset.")
-        
+
         try {
             ServiceLocator.Get("Temp")
             Assert.Fail("Service mapping should be cleared after Reset.")
@@ -65,9 +65,9 @@ class ServiceLocatorTest {
     }
 
     /**
-     * @method Teardown
-     * Clean up after tests.
-     */
+    * @method Teardown
+    * Clean up after tests.
+    */
     Teardown() {
         ServiceLocator.Reset()
     }

@@ -6,8 +6,8 @@
  */
 class WindowTest {
     /**
-     * @method Test_InterfaceExists
-     */
+    * @method Test_InterfaceExists
+    */
     Test_InterfaceExists() {
         Assert.True(HasMethod(Window, "Next"), "Next() should exist.")
         Assert.True(HasMethod(Window, "Prev"), "Prev() should exist.")

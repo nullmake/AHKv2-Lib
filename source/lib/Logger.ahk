@@ -118,7 +118,8 @@ class Logger {
         }
 
         if (IsSet(err)) {
-            detail .= "`n[" . err.What . "] " . err.Message
+            _msg := IsObject(err.Message) ? "[Object]" : String(err.Message)
+            detail .= "`n[" . err.What . "] " . _msg
             detail .= "`n--- call stack ---`n" . err.Stack
         }
 
