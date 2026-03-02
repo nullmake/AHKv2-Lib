@@ -1,21 +1,19 @@
 # AHKv2-Lib
 
-A collection of high-quality, strictly compliant, and well-tested libraries for AutoHotkey v2.
+A collection of robust, modular components optimized specifically for AutoHotkey v2.
 
-## Goals
+## Key Features
 
-- **Strict Compliance**: Adherence to official specifications (e.g., YAML 1.2.2).
-- **Test-Driven Development**: 100% public member test coverage to ensure reliability.
-- **Modern AHK v2 Syntax**: Built from the ground up using native v2 features (Map, Array, Objects).
-- **Clean Architecture**: Clear separation of concerns following Core/Infrastructure layers.
+- **Native v2 Optimization**: Leverages modern AHK v2 features (Map, Array, and Objects) for improved performance and readability.
+- **Modular & Standalone**: Designed with minimal internal dependencies. Most utilities can be integrated into your project by simply copying a single file.
 
-## Architecture
+## Architecture & Portability
 
-The project is designed for high portability and modularity:
+The project is structured for high portability:
 
-- **Feature-Based Structure**: Each library (e.g., Yaml) is organized in its own directory, making it easy to copy specific features into your project.
-- **Minimal Dependencies**: Infrastructure components like logging and assertions are kept lightweight to ensure individual modules remain easy to integrate.
-- **Portability**: Each source file includes its own license header, supporting the practice of picking up specific files as needed.
+- **Decoupled Design**: Each module (e.g., Yaml) is organized to function independently, making it easy to pick and choose only what you need.
+- **Lightweight Infrastructure**: Core utilities like assertions and logging are kept minimal to prevent "dependency bloat" when integrating into your scripts.
+- **Self-Contained Licenses**: Each source file includes its own license header, simplifying compliance for individual file usage.
 
 ## Project Structure
 
@@ -24,10 +22,6 @@ AHKv2-Lib/
 ├── documents/
 ├── source/
 │   ├── lib/
-│   │   ├── Yaml/
-│   │   ├── Assert.ahk
-│   │   ├── Ime.ahk
-│   │   └── ... (other utilities)
 │   └── tests/
 └── tools/
 ```
@@ -35,13 +29,13 @@ AHKv2-Lib/
 | Directory | Description |
 | :--- | :--- |
 | **documents/** | Technical specifications and design notes (Synced with GitHub Wiki). |
-| **source/lib/** | Library files. Large modules are in folders, simple utilities are flat. |
-| **source/tests/** | Unit tests following the library structure. |
-| **tools/** | Helper scripts for development, build, and maintenance. |
+| **source/lib/** | Library files (Folders for modules, flat files for utilities). |
+| **source/tests/** | Unit tests corresponding to the library structure. |
+| **tools/** | Helper scripts for development and maintenance. |
 
 ## Development
 
-This project is developed in collaboration between human and AI, with a focus on engineering excellence and high-quality software development.
+This project is developed with the assistance of AI (Google Gemini).
 
 ## License
 
