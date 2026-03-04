@@ -5,15 +5,15 @@
  * @description Buffers logs in memory and flushes to rotating files.
  * @author nullmake
  * @license Apache-2.0
- * 
+ *
  * Copyright 2026 nullmake
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -136,15 +136,16 @@ class Logger {
     /**
      * @method Flush
      * Writes the current full buffer to a file. Does NOT clear the buffer.
-     * @param {String} trigger - Label for the filename (Default: MAN).
+     * @param {String} trigger - Label for the filename (Default: "").
      */
-    Flush(trigger := "MAN") {
+    Flush(trigger := "") {
         if (!this.Enabled || this.buffer.Length == 0) {
             return
         }
 
         ts := FormatTime(, "yyyyMMdd_HHmmss")
-        fName := "kyuri_" . ts . "_P" . this.pid . "_" . trigger . ".log"
+        prefix := trigger ? trigger . "_" : ""
+        fName := prefix . ts . "_P" . this.pid . ".log"
         fullPath := this.logDir . "\" . fName
 
         content := ""
@@ -161,6 +162,8 @@ class Logger {
         } catch Error as e {
             OutputDebug("Log Flush failed: " . e.Message)
         }
+
+        return fullPath
     }
 
     /**
@@ -169,7 +172,7 @@ class Logger {
      */
     Rotate() {
         filePaths := ""
-        loop files, this.logDir . "\kyuri_*.log" {
+        loop files, this.logDir . "\*.log" {
             filePaths .= A_LoopFileFullPath . "`n"
         }
 

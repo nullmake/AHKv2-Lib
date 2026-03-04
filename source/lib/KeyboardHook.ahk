@@ -156,6 +156,6 @@ class KeyboardHook {
      */
     _SafeLog(err) {
         ; Use OutputDebug to avoid dependency on Logger class
-        OutputDebug("Kyuri Hook Error: " . err.Message . " (" . err.Line . ")")
+        OutputDebug("Hook Error: " . err.Message . " (" . err.Line . ")")
     }
 }
