@@ -47,7 +47,7 @@ jobs:
             echo "Error: source/lib directory not found!"
             exit 1
           fi
-          mv version.json dist/
+          mv version.json LICENSE dist/
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
